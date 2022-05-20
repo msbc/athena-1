@@ -89,10 +89,16 @@ parser.add_argument(
     help='select coordinate system')
 
 # --eos=[name] argument
+gen_eos_directory = 'src/eos/general/'
+# set gen_eos_choices to list of .cpp files in src/eos/general
+gen_eos_choices = glob.glob(gen_eos_directory + '*.cpp')
+# remove 'src/eos/' prefix and '.cpp' extension from each filename, remove "general" files
+gen_eos_choices = [choice[len('src/eos/'):-4] for choice in gen_eos_choices
+                   if 'src/eos/general/general' not in choice]
+gen_eos_choices.remove('general/noop')
 parser.add_argument('--eos',
                     default='adiabatic',
-                    choices=['adiabatic', 'isothermal', 'general/eos_table',
-                             'general/hydrogen', 'general/ideal', 'general/qw_eos'],
+                    choices=['adiabatic', 'isothermal'] + gen_eos_choices,
                     help='select equation of state')
 
 # --flux=[name] argument
