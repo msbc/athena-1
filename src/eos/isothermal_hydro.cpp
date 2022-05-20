@@ -65,7 +65,8 @@ void EquationOfState::ConservedToPrimitive(
       }
     }
   }
-
+  if (NSCALARS > 0)
+    PassiveScalarConservedToPrimitive(s, cons, r_old, r, pco, il, iu, jl, ju, kl, ku);
   return;
 }
 
@@ -101,7 +102,8 @@ void EquationOfState::PrimitiveToConserved(
       }
     }
   }
-
+if (NSCALARS > 0)
+    PassiveScalarPrimitiveToConserved(r, prim, s, pco, il, iu, jl, ju, kl, ku);
   return;
 }
 
@@ -118,12 +120,14 @@ Real EquationOfState::SoundSpeed(const Real dummy_arg[NHYDRO]) {
 //!                                                 int i)
 //! \brief Apply density floor to reconstructed L/R cell interface states
 
-void EquationOfState::ApplyPrimitiveFloors(AthenaArray<Real> &prim, int k, int j, int i) {
+void EquationOfState::ApplyPrimitiveFloors(AthenaArray<Real> &prim, AthenaArray<Real> &r,
+                                           int k, int j, int i) {
   Real& w_d  = prim(IDN,i);
 
   // apply density floor
   w_d = (w_d > density_floor_) ?  w_d : density_floor_;
-
+  if (NSCALARS > 0)
+    ApplyPassiveScalarFloors(r, k, j, i);
   return;
 }
 
@@ -134,7 +138,7 @@ void EquationOfState::ApplyPrimitiveFloors(AthenaArray<Real> &prim, int k, int j
 
 void EquationOfState::ApplyPrimitiveConservedFloors(
     AthenaArray<Real> &prim, AthenaArray<Real> &cons, AthenaArray<Real> &bcc,
-    int k, int j, int i) {
+    AthenaArray<Real> &r, AthenaArray<Real> &s, int k, int j, int i) {
   Real& w_d  = prim(IDN,k,j,i);
   Real& u_d  = cons(IDN,k,j,i);
 
@@ -142,6 +146,7 @@ void EquationOfState::ApplyPrimitiveConservedFloors(
   w_d = (w_d > density_floor_) ?  w_d : density_floor_;
   // ensure cons density matches
   u_d = w_d;
-
+  if (NSCALARS > 0)
+    ApplyPassiveScalarPrimitiveConservedFloors(s, prim, r, k, j, i);
   return;
 }

@@ -77,7 +77,8 @@ void EquationOfState::ConservedToPrimitive(
       }
     }
   }
-
+  if (NSCALARS > 0)
+    PassiveScalarConservedToPrimitive(s, cons, r_old, r, pco, il, iu, jl, ju, kl, ku);
   return;
 }
 
@@ -117,7 +118,8 @@ void EquationOfState::PrimitiveToConserved(
       }
     }
   }
-
+  if (NSCALARS > 0)
+    PassiveScalarPrimitiveToConserved(r, prim, s, pco, il, iu, jl, ju, kl, ku);
   return;
 }
 
@@ -132,7 +134,8 @@ Real EquationOfState::SoundSpeed(const Real prim[NHYDRO]) {
 //! \fn void EquationOfState::ApplyPrimitiveFloors(AthenaArray<Real> &prim, int k, int j,
 //!                                                 =int i)
 //! \brief Apply density and pressure floors to reconstructed L/R cell interface states
-void EquationOfState::ApplyPrimitiveFloors(AthenaArray<Real> &prim, int k, int j, int i) {
+void EquationOfState::ApplyPrimitiveFloors(AthenaArray<Real> &prim, AthenaArray<Real> &r,
+                                           int k, int j, int i) {
   Real& w_d  = prim(IDN,i);
   Real& w_p  = prim(IPR,i);
 
@@ -140,7 +143,8 @@ void EquationOfState::ApplyPrimitiveFloors(AthenaArray<Real> &prim, int k, int j
   w_d = (w_d > density_floor_) ?  w_d : density_floor_;
   // apply pressure floor
   w_p = (w_p > pressure_floor_) ?  w_p : pressure_floor_;
-
+  if (NSCALARS > 0)
+    ApplyPassiveScalarFloors(r, k, j, i);
   return;
 }
 
@@ -150,7 +154,7 @@ void EquationOfState::ApplyPrimitiveFloors(AthenaArray<Real> &prim, int k, int j
 //! \brief Apply pressure (prim) floor and correct energy (cons) (typically after W(U))
 void EquationOfState::ApplyPrimitiveConservedFloors(
     AthenaArray<Real> &prim, AthenaArray<Real> &cons, AthenaArray<Real> &bcc,
-    int k, int j, int i) {
+    AthenaArray<Real> &r, AthenaArray<Real> &s, int k, int j, int i) {
   Real gm1 = GetGamma() - 1.0;
   Real& w_d  = prim(IDN,k,j,i);
   Real& w_p  = prim(IPR,k,j,i);
@@ -169,6 +173,7 @@ void EquationOfState::ApplyPrimitiveConservedFloors(
         u_e : ((pressure_floor_/gm1) + e_k);
   w_p = (w_p > pressure_floor_) ?
         w_p : pressure_floor_;
-
+  if (NSCALARS > 0)
+    ApplyPassiveScalarPrimitiveConservedFloors(s, prim, r, k, j, i);
   return;
 }

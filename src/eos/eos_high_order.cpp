@@ -90,7 +90,7 @@ void EquationOfState::ConservedToPrimitiveCellAverage(
     for (int j=jl; j<=ju; ++j) {
 #pragma omp simd
       for (int i=il; i<=iu; ++i) {
-        ApplyPrimitiveConservedFloors(prim, cons, bcc, k, j, i);
+        ApplyPrimitiveConservedFloors(prim, cons, bcc, r, s, k, j, i);
       }
     }
   }

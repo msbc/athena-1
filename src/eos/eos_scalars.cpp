@@ -115,7 +115,7 @@ void EquationOfState::PassiveScalarConservedToPrimitiveCellAverage(
           r(n,k,j,i) = r_cc(n,k,j,i) + C*laplacian_cc(n,k,j,i);
           // Reapply primitive variable floors to cell-average of (prim) dimensionless
           // concentration WITHOUT correcting cell-average of (cons) scalar mass
-          ApplyPassiveScalarFloors(r, n, k, j, i);
+          ApplyPassiveScalarFloors(r, k, j, i);
           //ApplyPassiveScalarPrimitiveConservedFloors(s, w, r, n, k, j, i);
         }
       }
@@ -159,7 +159,7 @@ void EquationOfState::PassiveScalarPrimitiveToConserved(
 //! reconstructed L/R cell interface states (if PPM is used, e.g.) along:
 //! (NSCALARS x) x1 slices
 
-void EquationOfState::ApplyPassiveScalarFloors(AthenaArray<Real> &r, int n, int k, int j,
+void EquationOfState::ApplyPassiveScalarFloors(AthenaArray<Real> &r, int k, int j,
                                                int i) {
   // TODO(felker): process user-input "hydro/sfloor" in each EquationOfState ctor
   // 8x .cpp files + more in general/. Is there a better way to avoid code duplication?
@@ -180,19 +180,22 @@ void EquationOfState::ApplyPassiveScalarFloors(AthenaArray<Real> &r, int n, int 
 
 void EquationOfState::ApplyPassiveScalarPrimitiveConservedFloors(
     AthenaArray<Real> &s, const AthenaArray<Real> &w, AthenaArray<Real> &r,
-    int n, int k, int j, int i) {
+    int k, int j, int i) {
   const Real &w_d  = w(IDN,k,j,i);
   const Real di = 1.0/w_d;
-  Real& s_n  = s(n,k,j,i);
-  Real& r_n  = r(n,k,j,i);
 
-  s_n = (s_n < scalar_floor_*w_d) ?  scalar_floor_*w_d : s_n;
+  for (int n=0; n<NSCALARS; ++n) {
+    Real& s_n  = s(n,k,j,i);
+    Real& r_n  = r(n,k,j,i);
 
-  // this next line, when applied indiscriminately, erases the accuracy gains performed in
-  // the 4th order stencils, since <r> != <s>*<1/di>, in general
-  r_n = s_n*di;
-  // however, if r_n is riding the variable floor, it probably should be applied so that
-  // s_n = rho*r_n is consistent (more concerned with conservation than order of accuracy
-  // when quantities are floored)
+    s_n = (s_n < scalar_floor_*w_d) ?  scalar_floor_*w_d : s_n;
+
+    // this next line, when applied indiscriminately, erases the accuracy gains performed in
+    // the 4th order stencils, since <r> != <s>*<1/di>, in general
+    r_n = s_n*di;
+    // however, if r_n is riding the variable floor, it probably should be applied so that
+    // s_n = rho*r_n is consistent (more concerned with conservation than order of accuracy
+    // when quantities are floored)
+  }
   return;
 }

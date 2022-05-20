@@ -278,6 +278,8 @@ void EquationOfState::ConservedToPrimitive(
       }
     }
   }
+  if (NSCALARS > 0)
+    PassiveScalarConservedToPrimitive(s, cons, r_old, r, pco, il, iu, jl, ju, kl, ku);
   return;
 }
 
@@ -345,6 +347,8 @@ void EquationOfState::PrimitiveToConserved(
       }
     }
   }
+  if (NSCALARS > 0)
+    PassiveScalarPrimitiveToConserved(r, prim, s, pco, il, iu, jl, ju, kl, ku);
   return;
 }
 
@@ -545,7 +549,8 @@ bool ConservedToPrimitiveNormal(
 //                                                 int i)
 // \brief Apply density and pressure floors to reconstructed L/R cell interface states
 
-void EquationOfState::ApplyPrimitiveFloors(AthenaArray<Real> &prim, int k, int j, int i) {
+void EquationOfState::ApplyPrimitiveFloors(AthenaArray<Real> &prim, AthenaArray<Real> &r,
+                                           int k, int j, int i) {
   Real& w_d  = prim(IDN,i);
   Real& w_p  = prim(IPR,i);
   // Eventually, may want to check that small field errors don't overwhelm gas floor
@@ -564,6 +569,7 @@ void EquationOfState::ApplyPrimitiveFloors(AthenaArray<Real> &prim, int k, int j
   w_d = (w_d > density_floor_) ?  w_d : density_floor_;
   // apply pressure floor
   w_p = (w_p > pressure_floor_) ?  w_p : pressure_floor_;
-
+  if (NSCALARS > 0)
+    ApplyPassiveScalarFloors(r, k, j, i);
   return;
 }
