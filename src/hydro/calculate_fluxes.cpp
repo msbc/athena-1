@@ -105,7 +105,7 @@ void Hydro::CalculateFluxes(AthenaArray<Real> &w, FaceField &b,
 #pragma omp simd
           for (int i=is; i<=ie+1; ++i) {
             pmb->peos->ApplyPassiveScalarFloors(rl_, n, k, j, i);
-            if (NSCALARS) pmb->peos->ApplyPassiveScalarFloors(rr_, n, k, j, i);
+            pmb->peos->ApplyPassiveScalarFloors(rr_, n, k, j, i);
           }
         }
       }
