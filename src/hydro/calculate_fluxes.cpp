@@ -98,7 +98,7 @@ void Hydro::CalculateFluxes(AthenaArray<Real> &w, FaceField &b,
       } else if (order == 2) {
         pmb->precon->PiecewiseLinearX1(k, j, is-1, ie+1, w, bcc, wl_, wr_, r, rl_, rr_);
       } else {
-        pmb->precon->PiecewiseParabolicX1(k, j, is-1, ie+1, w, bcc, wl_, wr_, r, rl_, rr_);
+        pmb->precon->PiecewiseParabolicX1(k, j, is-1, ie+1, w, bcc, wl_, wr_, r, rl_,rr_);
       }
 
       pmb->pcoord->CenterWidth1(k, j, is, ie+1, dxw_);
@@ -230,7 +230,7 @@ void Hydro::CalculateFluxes(AthenaArray<Real> &w, FaceField &b,
         } else if (order == 2) {
           pmb->precon->PiecewiseLinearX2(k, j, il, iu, w, bcc, wlb_, wr_, r, rlb_, rr_);
         } else {
-          pmb->precon->PiecewiseParabolicX2(k, j, il, iu, w, bcc, wlb_, wr_, r, rlb_, rr_);
+          pmb->precon->PiecewiseParabolicX2(k, j, il, iu, w, bcc, wlb_, wr_, r, rlb_,rr_);
         }
 
         pmb->pcoord->CenterWidth2(k, j, il, iu, dxw_);
@@ -363,7 +363,7 @@ void Hydro::CalculateFluxes(AthenaArray<Real> &w, FaceField &b,
         } else if (order == 2) {
           pmb->precon->PiecewiseLinearX3(k, j, il, iu, w, bcc, wlb_, wr_, r, rlb_, rr_);
         } else {
-          pmb->precon->PiecewiseParabolicX3(k, j, il, iu, w, bcc, wlb_, wr_, r, rlb_, rr_);
+          pmb->precon->PiecewiseParabolicX3(k, j, il, iu, w, bcc, wlb_, wr_, r, rlb_,rr_);
         }
 
         pmb->pcoord->CenterWidth3(k, j, il, iu, dxw_);

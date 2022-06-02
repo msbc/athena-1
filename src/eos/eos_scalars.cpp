@@ -189,12 +189,12 @@ void EquationOfState::ApplyPassiveScalarPrimitiveConservedFloors(
 
     s_n = (s_n < scalar_floor_*w_d) ?  scalar_floor_*w_d : s_n;
 
-    // this next line, when applied indiscriminately, erases the accuracy gains performed in
-    // the 4th order stencils, since <r> != <s>*<1/di>, in general
+    // this next line, when applied indiscriminately, erases the accuracy gains performed
+    // in the 4th order stencils, since <r> != <s>*<1/di>, in general
     r_n = s_n*di;
     // however, if r_n is riding the variable floor, it probably should be applied so that
-    // s_n = rho*r_n is consistent (more concerned with conservation than order of accuracy
-    // when quantities are floored)
+    // s_n = rho*r_n is consistent (more concerned with conservation than order of
+    // accuracy when quantities are floored)
   }
   return;
 }

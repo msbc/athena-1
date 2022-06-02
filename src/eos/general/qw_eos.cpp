@@ -98,7 +98,6 @@ void QWData(Real rho, Real T, Real Ye, AthenaArray<Real> &OutData) {
   Real b = std::sqrt(4.0*a6+27.0*a4*y2);
   Real term = std::pow(9.0*a2*Ye+root3*b, third);
   Real eta = (eta_den_A)*term/a - (eta_den_B)*a/term; // actually eta/pi
-  //std::cout<<"eta    "<<eta<<"     "<<Ye<<"\n";
   Real eta2 = SQR(eta);
   Real eta3 = eta*eta2;
   Real eta4 = SQR(eta2);
@@ -487,7 +486,7 @@ void EquationOfState::InitEosConstants(ParameterInput* pin) {
   }
   T_floor = pin->GetOrAddReal("hydro", "T_floor", Tmin);
   T_ceil = pin->GetOrAddReal("hydro", "T_ceil", Tmax);
-  if(T_floor<Tmin){
+  if (T_floor<Tmin) {
     T_floor=Tmin;
   }
   std::cout<<"T floor and ceil   "<<T_floor<<"   "<<T_ceil<<"\n";

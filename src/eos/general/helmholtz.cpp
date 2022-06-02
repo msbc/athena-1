@@ -42,7 +42,7 @@ namespace HelmholtzConstants {
                     a2=0.29561, b2=1.9885, c2=0.288675;
   //const Real qe=4.8032042712e-10;
   const Real esqu=qe*qe;
-}
+} // namespace HelmholtzConstants
 
 class HelmTable {
  public:
@@ -144,7 +144,7 @@ class HelmTable {
 // OutData has length 6 (HelmholtzConstants::nOut)
   void HelmLookupRhoT(Real den, Real temp, Real ye, Real abar,
                       AthenaArray<Real> &OutData) {
-    using namespace HelmholtzConstants;
+    using namespace HelmholtzConstants;  // NOLINT (build/namespace)
     Real din = ye * den;
     Real ytot1 = 1.0/abar;
     Real zbar = ye * abar;
@@ -1087,7 +1087,8 @@ void EquationOfState::InitEosConstants(ParameterInput *pin) {
       if (i_temp < 0 || i_temp >= NSCALARS) {
         std::stringstream msg;
         msg << "### FATAL ERROR in EquationOfState::InitEosConstants" << std::endl
-            << "hydro/helm_temp_index must be between 0 and NSCALARS (" << NSCALARS << ")."
+            << "hydro/helm_temp_index must be between 0 and NSCALARS ("
+            << NSCALARS << ")."
             << std::endl;
         ATHENA_ERROR(msg);
       }
