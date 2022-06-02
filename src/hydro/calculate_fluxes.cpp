@@ -96,18 +96,9 @@ void Hydro::CalculateFluxes(AthenaArray<Real> &w, FaceField &b,
         pmb->precon->DonorCellX1(k, j, is-1, ie+1, w, bcc, wl_, wr_);
         if (NSCALARS) pmb->precon->DonorCellX1(k, j, is-1, ie+1, r, rl_, rr_);
       } else if (order == 2) {
-        pmb->precon->PiecewiseLinearX1(k, j, is-1, ie+1, w, bcc, wl_, wr_);
-        if (NSCALARS) pmb->precon->PiecewiseLinearX1(k, j, is-1, ie+1, r, rl_, rr_);
+        pmb->precon->PiecewiseLinearX1(k, j, is-1, ie+1, w, bcc, wl_, wr_, r, rl_, rr_);
       } else {
-        pmb->precon->PiecewiseParabolicX1(k, j, is-1, ie+1, w, bcc, wl_, wr_);
-        if (NSCALARS) pmb->precon->PiecewiseParabolicX1(k, j, is-1, ie+1, r, rl_, rr_);
-        for (int n=0; n<NSCALARS; ++n) {
-#pragma omp simd
-          for (int i=is; i<=ie+1; ++i) {
-            pmb->peos->ApplyPassiveScalarFloors(rl_, n, k, j, i);
-            pmb->peos->ApplyPassiveScalarFloors(rr_, n, k, j, i);
-          }
-        }
+        pmb->precon->PiecewiseParabolicX1(k, j, is-1, ie+1, w, bcc, wl_, wr_, r, rl_, rr_);
       }
 
       pmb->pcoord->CenterWidth1(k, j, is, ie+1, dxw_);
@@ -163,11 +154,6 @@ void Hydro::CalculateFluxes(AthenaArray<Real> &w, FaceField &b,
             wr_(n,i) = wr3d_(n,k,j,i) - C*laplacian_r_fc_(i);
           }
         }
-#pragma omp simd
-        for (int i=is; i<=ie+1; ++i) {
-          pmb->peos->ApplyPrimitiveFloors(wl_, k, j, i);
-          pmb->peos->ApplyPrimitiveFloors(wr_, k, j, i);
-        }
         // repeat for scalars
         for (int n=0; n<NSCALARS; ++n) {
           pmb->pcoord->LaplacianX1(rl3d_, ps->laplacian_l_fc_, n, k, j, is, ie+1);
@@ -176,9 +162,12 @@ void Hydro::CalculateFluxes(AthenaArray<Real> &w, FaceField &b,
           for (int i=is; i<=ie+1; ++i) {
             rl_(n,i) = rl3d_(n,k,j,i) - C*ps->laplacian_l_fc_(i);
             rr_(n,i) = rr3d_(n,k,j,i) - C*ps->laplacian_r_fc_(i);
-            pmb->peos->ApplyPassiveScalarFloors(rl_, n, k, j, i);
-            pmb->peos->ApplyPassiveScalarFloors(rr_, n, k, j, i);
           }
+        }
+#pragma omp simd
+        for (int i=is; i<=ie+1; ++i) {
+          pmb->peos->ApplyPrimitiveFloors(wl_, rl_, k, j, i);
+          pmb->peos->ApplyPrimitiveFloors(wr_, rr_, k, j, i);
         }
 
         // Compute x1 interface fluxes from face-centered primitive variables
@@ -229,20 +218,9 @@ void Hydro::CalculateFluxes(AthenaArray<Real> &w, FaceField &b,
         pmb->precon->DonorCellX2(k, js-1, il, iu, w, bcc, wl_, wr_);
         if (NSCALARS) pmb->precon->DonorCellX2(k, js-1, il, iu, r, rl_, rr_);
       } else if (order == 2) {
-        pmb->precon->PiecewiseLinearX2(k, js-1, il, iu, w, bcc, wl_, wr_);
-        if (NSCALARS) pmb->precon->PiecewiseLinearX2(k, js-1, il, iu, r, rl_, rr_);
+        pmb->precon->PiecewiseLinearX2(k, js-1, il, iu, w, bcc, wl_, wr_, r, rl_, rr_);
       } else {
-        pmb->precon->PiecewiseParabolicX2(k, js-1, il, iu, w, bcc, wl_, wr_);
-        if (NSCALARS) pmb->precon->PiecewiseParabolicX2(k, js-1, il, iu, r, rl_, rr_);
-        for (int n=0; n<NSCALARS; ++n) {
-#pragma omp simd
-          for (int i=il; i<=iu; ++i) {
-            pmb->peos->ApplyPassiveScalarFloors(rl_, n, k, js-1, i);
-            // MSBC: I don't understand why this line was commented out in
-            // calculate_scalar_fluxes.cpp
-            //pmb->peos->ApplyPassiveScalarFloors(rr_, n, k, j, i);
-          }
-        }
+        pmb->precon->PiecewiseParabolicX2(k, js-1, il, iu, w, bcc, wl_, wr_, r, rl_, rr_);
       }
       for (int j=js; j<=je+1; ++j) {
         // reconstruct L/R states at j
@@ -250,18 +228,9 @@ void Hydro::CalculateFluxes(AthenaArray<Real> &w, FaceField &b,
           pmb->precon->DonorCellX2(k, j, il, iu, w, bcc, wlb_, wr_);
           if (NSCALARS) pmb->precon->DonorCellX2(k, j, il, iu, r, rlb_, rr_);
         } else if (order == 2) {
-          pmb->precon->PiecewiseLinearX2(k, j, il, iu, w, bcc, wlb_, wr_);
-          if (NSCALARS) pmb->precon->PiecewiseLinearX2(k, j, il, iu, r, rlb_, rr_);
+          pmb->precon->PiecewiseLinearX2(k, j, il, iu, w, bcc, wlb_, wr_, r, rlb_, rr_);
         } else {
-          pmb->precon->PiecewiseParabolicX2(k, j, il, iu, w, bcc, wlb_, wr_);
-          if (NSCALARS) pmb->precon->PiecewiseParabolicX2(k, j, il, iu, r, rlb_, rr_);
-          for (int n=0; n<NSCALARS; ++n) {
-#pragma omp simd
-            for (int i=il; i<=iu; ++i) {
-              pmb->peos->ApplyPassiveScalarFloors(rlb_, n, k, j, i);
-              pmb->peos->ApplyPassiveScalarFloors(rr_, n, k, j, i);
-            }
-          }
+          pmb->precon->PiecewiseParabolicX2(k, j, il, iu, w, bcc, wlb_, wr_, r, rlb_, rr_);
         }
 
         pmb->pcoord->CenterWidth2(k, j, il, iu, dxw_);
@@ -323,8 +292,8 @@ void Hydro::CalculateFluxes(AthenaArray<Real> &w, FaceField &b,
           }
 #pragma omp simd
           for (int i=il; i<=iu; ++i) {
-            pmb->peos->ApplyPrimitiveFloors(wl_, k, j, i);
-            pmb->peos->ApplyPrimitiveFloors(wr_, k, j, i);
+            pmb->peos->ApplyPrimitiveFloors(wl_, rl_, k, j, i);
+            pmb->peos->ApplyPrimitiveFloors(wr_, rr_, k, j, i);
           }
           for (int n=0; n<NSCALARS; ++n) {
             pmb->pcoord->LaplacianX2(rl3d_, ps->laplacian_l_fc_, n, k, j, il, iu);
@@ -333,8 +302,8 @@ void Hydro::CalculateFluxes(AthenaArray<Real> &w, FaceField &b,
             for (int i=il; i<=iu; ++i) {
               rl_(n,i) = rl3d_(n,k,j,i) - C*ps->laplacian_l_fc_(i);
               rr_(n,i) = rr3d_(n,k,j,i) - C*ps->laplacian_r_fc_(i);
-              pmb->peos->ApplyPassiveScalarFloors(rl_, n, k, j, i);
-              pmb->peos->ApplyPassiveScalarFloors(rr_, n, k, j, i);
+              pmb->peos->ApplyPassiveScalarFloors(rl_, k, j, i);
+              pmb->peos->ApplyPassiveScalarFloors(rr_, k, j, i);
             }
           }
 
@@ -383,37 +352,18 @@ void Hydro::CalculateFluxes(AthenaArray<Real> &w, FaceField &b,
         pmb->precon->DonorCellX3(ks-1, j, il, iu, w, bcc, wl_, wr_);
         if (NSCALARS) pmb->precon->DonorCellX3(ks-1, j, il, iu, r, rl_, rr_);
       } else if (order == 2) {
-        pmb->precon->PiecewiseLinearX3(ks-1, j, il, iu, w, bcc, wl_, wr_);
-        if (NSCALARS) pmb->precon->PiecewiseLinearX3(ks-1, j, il, iu, r, rl_, rr_);
+        pmb->precon->PiecewiseLinearX3(ks-1, j, il, iu, w, bcc, wl_, wr_, r, rl_, rr_);
       } else {
-        pmb->precon->PiecewiseParabolicX3(ks-1, j, il, iu, w, bcc, wl_, wr_);
-        if (NSCALARS) pmb->precon->PiecewiseParabolicX3(ks-1, j, il, iu, r, rl_, rr_);
-        for (int n=0; n<NSCALARS; ++n) {
-#pragma omp simd
-          for (int i=il; i<=iu; ++i) {
-            pmb->peos->ApplyPassiveScalarFloors(rl_, n, ks-1, j, i);
-            //pmb->peos->ApplyPassiveScalarFloors(rr_, n, k, j, i);
-          }
-        }
+        pmb->precon->PiecewiseParabolicX3(ks-1, j, il, iu, w, bcc, wl_, wr_, r, rl_, rr_);
       }
       for (int k=ks; k<=ke+1; ++k) {
         // reconstruct L/R states at k
         if (order == 1) {
           pmb->precon->DonorCellX3(k, j, il, iu, w, bcc, wlb_, wr_);
-          if (NSCALARS) pmb->precon->DonorCellX3(k, j, il, iu, r, rlb_, rr_);
         } else if (order == 2) {
-          pmb->precon->PiecewiseLinearX3(k, j, il, iu, w, bcc, wlb_, wr_);
-          if (NSCALARS) pmb->precon->PiecewiseLinearX3(k, j, il, iu, r, rlb_, rr_);
+          pmb->precon->PiecewiseLinearX3(k, j, il, iu, w, bcc, wlb_, wr_, r, rlb_, rr_);
         } else {
-          pmb->precon->PiecewiseParabolicX3(k, j, il, iu, w, bcc, wlb_, wr_);
-          if (NSCALARS) pmb->precon->PiecewiseParabolicX3(k, j, il, iu, r, rlb_, rr_);
-          for (int n=0; n<NSCALARS; ++n) {
-#pragma omp simd
-            for (int i=il; i<=iu; ++i) {
-              pmb->peos->ApplyPassiveScalarFloors(rlb_, n, k, j, i);
-              pmb->peos->ApplyPassiveScalarFloors(rr_, n, k, j, i);
-            }
-          }
+          pmb->precon->PiecewiseParabolicX3(k, j, il, iu, w, bcc, wlb_, wr_, r, rlb_, rr_);
         }
 
         pmb->pcoord->CenterWidth3(k, j, il, iu, dxw_);
@@ -474,8 +424,8 @@ void Hydro::CalculateFluxes(AthenaArray<Real> &w, FaceField &b,
           }
 #pragma omp simd
           for (int i=il; i<=iu; ++i) {
-            pmb->peos->ApplyPrimitiveFloors(wl_, k, j, i);
-            pmb->peos->ApplyPrimitiveFloors(wr_, k, j, i);
+            pmb->peos->ApplyPrimitiveFloors(wl_, rl_, k, j, i);
+            pmb->peos->ApplyPrimitiveFloors(wr_, rr_, k, j, i);
           }
           for (int n=0; n<NSCALARS; ++n) {
             pmb->pcoord->LaplacianX3(rl3d_, laplacian_l_fc_, n, k, j, il, iu);
@@ -484,8 +434,8 @@ void Hydro::CalculateFluxes(AthenaArray<Real> &w, FaceField &b,
             for (int i=il; i<=iu; ++i) {
               rl_(n,i) = rl3d_(n,k,j,i) - C*laplacian_l_fc_(i);
               rr_(n,i) = rr3d_(n,k,j,i) - C*laplacian_r_fc_(i);
-              pmb->peos->ApplyPassiveScalarFloors(rl_, n, k, j, i);
-              pmb->peos->ApplyPassiveScalarFloors(rr_, n, k, j, i);
+              pmb->peos->ApplyPassiveScalarFloors(rl_, k, j, i);
+              pmb->peos->ApplyPassiveScalarFloors(rr_, k, j, i);
             }
           }
 

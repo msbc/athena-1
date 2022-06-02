@@ -27,7 +27,8 @@
 void Reconstruction::PiecewiseLinearX1(
     const int k, const int j, const int il, const int iu,
     const AthenaArray<Real> &w, const AthenaArray<Real> &bcc,
-    AthenaArray<Real> &wl, AthenaArray<Real> &wr) {
+    AthenaArray<Real> &wl, AthenaArray<Real> &wr,
+    const AthenaArray<Real> &r, AthenaArray<Real> &rl, AthenaArray<Real> &rr) {
   Coordinates *pco = pmy_block_->pcoord;
   // set work arrays to shallow copies of scratch arrays
   AthenaArray<Real> &bx = scr01_i_, &wc = scr1_ni_, &dwl = scr2_ni_, &dwr = scr3_ni_,
@@ -118,13 +119,20 @@ void Reconstruction::PiecewiseLinearX1(
     }
   }
 
+  if (NSCALARS) PiecewiseLinearX1(k, j, il, iu, r, rl, rr);
   if (characteristic_projection) {
 #pragma omp simd
     for (int i=il; i<=iu; ++i) {
       // Reapply EOS floors to both L/R reconstructed primitive states
       // TODO(felker): check if fused loop with NWAVE redundant application is slower
-      pmy_block_->peos->ApplyPrimitiveFloors(wl, k, j, i+1);
-      pmy_block_->peos->ApplyPrimitiveFloors(wr, k, j, i);
+      pmy_block_->peos->ApplyPrimitiveFloors(wl, rl, k, j, i+1);
+      pmy_block_->peos->ApplyPrimitiveFloors(wr, rr, k, j, i);
+    }
+  } else {
+#pragma omp simd
+    for (int i=il; i<=iu; ++i) {
+      pmy_block_->peos->ApplyPassiveScalarFloors(rl, k, j, i);
+      pmy_block_->peos->ApplyPassiveScalarFloors(rr, k, j, i);
     }
   }
   return;
@@ -140,7 +148,8 @@ void Reconstruction::PiecewiseLinearX1(
 void Reconstruction::PiecewiseLinearX2(
     const int k, const int j, const int il, const int iu,
     const AthenaArray<Real> &w, const AthenaArray<Real> &bcc,
-    AthenaArray<Real> &wl, AthenaArray<Real> &wr) {
+    AthenaArray<Real> &wl, AthenaArray<Real> &wr,
+    const AthenaArray<Real> &r, AthenaArray<Real> &rl, AthenaArray<Real> &rr) {
   Coordinates *pco = pmy_block_->pcoord;
   // set work arrays to shallow copies of scratch arrays
   AthenaArray<Real> &bx = scr01_i_, &wc = scr1_ni_, &dwl = scr2_ni_,
@@ -233,12 +242,19 @@ void Reconstruction::PiecewiseLinearX2(
     }
   }
 
+  if (NSCALARS) PiecewiseLinearX2(k, j, il, iu, r, rl, rr);
   if (characteristic_projection) {
 #pragma omp simd
     for (int i=il; i<=iu; ++i) {
       // Reapply EOS floors to both L/R reconstructed primitive states
-      pmy_block_->peos->ApplyPrimitiveFloors(wl, k, j, i);
-      pmy_block_->peos->ApplyPrimitiveFloors(wr, k, j, i);
+      pmy_block_->peos->ApplyPrimitiveFloors(wl, rl, k, j, i);
+      pmy_block_->peos->ApplyPrimitiveFloors(wr, rr, k, j, i);
+    }
+  } else {
+#pragma omp simd
+    for (int i=il; i<=iu; ++i) {
+      pmy_block_->peos->ApplyPassiveScalarFloors(rl, k, j, i);
+      pmy_block_->peos->ApplyPassiveScalarFloors(rr, k, j, i);
     }
   }
   return;
@@ -254,7 +270,8 @@ void Reconstruction::PiecewiseLinearX2(
 void Reconstruction::PiecewiseLinearX3(
     const int k, const int j, const int il, const int iu,
     const AthenaArray<Real> &w, const AthenaArray<Real> &bcc,
-    AthenaArray<Real> &wl, AthenaArray<Real> &wr) {
+    AthenaArray<Real> &wl, AthenaArray<Real> &wr,
+    const AthenaArray<Real> &r, AthenaArray<Real> &rl, AthenaArray<Real> &rr) {
   Coordinates *pco = pmy_block_->pcoord;
   // set work arrays to shallow copies of scratch arrays
   AthenaArray<Real> &bx = scr01_i_, &wc = scr1_ni_, &dwl = scr2_ni_, &dwr = scr3_ni_,
@@ -339,12 +356,19 @@ void Reconstruction::PiecewiseLinearX3(
     }
   }
 
+  if (NSCALARS) PiecewiseLinearX3(k, j, il, iu, r, rl, rr);
   if (characteristic_projection) {
 #pragma omp simd
     for (int i=il; i<=iu; ++i) {
       // Reapply EOS floors to both L/R reconstructed primitive states
-      pmy_block_->peos->ApplyPrimitiveFloors(wl, k, j, i);
-      pmy_block_->peos->ApplyPrimitiveFloors(wr, k, j, i);
+      pmy_block_->peos->ApplyPrimitiveFloors(wl, rl, k, j, i);
+      pmy_block_->peos->ApplyPrimitiveFloors(wr, rr, k, j, i);
+    }
+  } else {
+#pragma omp simd
+    for (int i=il; i<=iu; ++i) {
+      pmy_block_->peos->ApplyPassiveScalarFloors(rl, k, j, i);
+      pmy_block_->peos->ApplyPassiveScalarFloors(rr, k, j, i);
     }
   }
   return;

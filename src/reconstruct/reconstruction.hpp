@@ -70,27 +70,39 @@ class Reconstruction {
 
   void PiecewiseLinearX1(const int k, const int j, const int il, const int iu,
                          const AthenaArray<Real> &w, const AthenaArray<Real> &bcc,
-                         AthenaArray<Real> &wl, AthenaArray<Real> &wr);
+                         AthenaArray<Real> &wl, AthenaArray<Real> &wr,
+                         const AthenaArray<Real> &r, AthenaArray<Real> &rl,
+                         AthenaArray<Real> &rr);
 
   void PiecewiseLinearX2(const int k, const int j, const int il, const int iu,
                          const AthenaArray<Real> &w, const AthenaArray<Real> &bcc,
-                         AthenaArray<Real> &wl, AthenaArray<Real> &wr);
+                         AthenaArray<Real> &wl, AthenaArray<Real> &wr,
+                         const AthenaArray<Real> &r, AthenaArray<Real> &rl,
+                         AthenaArray<Real> &rr);
 
   void PiecewiseLinearX3(const int k, const int j, const int il, const int iu,
                          const AthenaArray<Real> &w, const AthenaArray<Real> &bcc,
-                         AthenaArray<Real> &wl, AthenaArray<Real> &wr);
+                         AthenaArray<Real> &wl, AthenaArray<Real> &wr,
+                         const AthenaArray<Real> &r, AthenaArray<Real> &rl,
+                         AthenaArray<Real> &rr);
 
   void PiecewiseParabolicX1(const int k, const int j, const int il, const int iu,
                             const AthenaArray<Real> &w, const AthenaArray<Real> &bcc,
-                            AthenaArray<Real> &wl, AthenaArray<Real> &wr);
+                            AthenaArray<Real> &wl, AthenaArray<Real> &wr,
+                            const AthenaArray<Real> &r, AthenaArray<Real> &rl,
+                            AthenaArray<Real> &rr);
 
   void PiecewiseParabolicX2(const int k, const int j, const int il, const int iu,
                             const AthenaArray<Real> &w, const AthenaArray<Real> &bcc,
-                            AthenaArray<Real> &wl, AthenaArray<Real> &wr);
+                            AthenaArray<Real> &wl, AthenaArray<Real> &wr,
+                            const AthenaArray<Real> &r, AthenaArray<Real> &rl,
+                            AthenaArray<Real> &rr);
 
   void PiecewiseParabolicX3(const int k, const int j, const int il, const int iu,
                             const AthenaArray<Real> &w, const AthenaArray<Real> &bcc,
-                            AthenaArray<Real> &wl, AthenaArray<Real> &wr);
+                            AthenaArray<Real> &wl, AthenaArray<Real> &wr,
+                            const AthenaArray<Real> &r, AthenaArray<Real> &rl,
+                            AthenaArray<Real> &rr);
 
   // overloads for non-fluid (cell-centered Hydro prim. and magnetic field) reconstruction
   void DonorCellX1(const int k, const int j, const int il, const int iu,

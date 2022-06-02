@@ -17,7 +17,10 @@
 #include "../field/field.hpp"
 #include "../hydro/hydro.hpp"
 #include "../mesh/mesh.hpp"
+#include "../scalars/scalars.hpp"
 #include "eos.hpp"
+
+static AthenaArray<Real> empty;
 
 //---------------------------------------------------------------------------------------
 //! \fn void EquationOfState::ConservedToPrimitiveCellAverage(AthenaArray<Real> &cons,
@@ -34,9 +37,11 @@ void EquationOfState::ConservedToPrimitiveCellAverage(
     Coordinates *pco, int il, int iu, int jl, int ju, int kl, int ku) {
   MeshBlock *pmb = pmy_block_;
   Hydro *ph = pmb->phydro;
+  PassiveScalars *ps = pmb->pscalars;
 
   int nl = 0;
   int nu = NHYDRO - 1;
+  int nus = NSCALARS - 1;
   // TODO(felker): assuming uniform mesh with dx1f=dx2f=dx3f, so this should factor out
   // TODO(felker): also, this may need to be dx1v, since Laplacian is cell-centered
   Real h = pco->dx1f(il);  // pco->dx1f(i); inside loop
@@ -47,8 +52,15 @@ void EquationOfState::ConservedToPrimitiveCellAverage(
   // Laplacians of cell-averaged conserved and 2nd order accurate primitive variables
   AthenaArray<Real> &laplacian_cc = ph->scr1_nkji_;
 
+    // Passive scalrs
+  AthenaArray<Real> &s_cc = (NSCALARS) ? ps->s_cc : empty;
+  AthenaArray<Real> &r_cc = (NSCALARS) ? ps->r_cc : empty;
+  // Laplacians of cell-averaged conserved and 2nd order accurate primitive variables
+  AthenaArray<Real> &s_laplacian_cc = (NSCALARS) ? ps->scr1_nkji_ : empty;
+
   // Compute and store Laplacian of cell-averaged conserved variables
   pco->Laplacian(cons, laplacian_cc, il, iu, jl, ju, kl, ku, nl, nu);
+  if (NSCALARS) pco->Laplacian(s, s_laplacian_cc, il, iu, jl, ju, kl, ku, nl, nus);
 
   // Compute fourth-order approximation to cell-centered conserved variables
   for (int n=nl; n<=nu; ++n) {
@@ -63,13 +75,26 @@ void EquationOfState::ConservedToPrimitiveCellAverage(
       }
     }
   }
+  // Scalars
+  for (int n=nl; n<=nus; ++n) {
+    for (int k=kl; k<=ku; ++k) {
+      for (int j=jl; j<=ju; ++j) {
+#pragma omp simd
+        for (int i=il; i<=iu; ++i) {
+          // We do not actually need to store all cell-centered conserved variables,
+          // but the ConservedToPrimitive() implementation operates on 4D arrays
+          s_cc(n,k,j,i) = s(n,k,j,i) - C*s_laplacian_cc(n,k,j,i);
+        }
+      }
+    }
+  }
 
   // Compute Laplacian of 2nd-order approximation to cell-averaged primitive variables
   pco->Laplacian(prim, laplacian_cc, il, iu, jl, ju, kl, ku, nl, nu);
+  if (NSCALARS) pco->Laplacian(r, s_laplacian_cc, il, iu, jl, ju, kl, ku, nl, nus);
 
   // Convert cell-centered conserved values to cell-centered primitive values
-  // MSBC: TODO: move PasiveScalarPrimitiveCellAverage here (need s_cc here)
-  ConservedToPrimitive(u_cc, prim_old, b, w_cc, bcc, s, r_old, r, pco, il, iu,
+  ConservedToPrimitive(u_cc, prim_old, b, w_cc, bcc, s_cc, r_old, r, pco, il, iu,
                        jl, ju, kl, ku);
 
   for (int n=nl; n<=nu; ++n) {
@@ -83,6 +108,17 @@ void EquationOfState::ConservedToPrimitiveCellAverage(
       }
     }
   }
+  for (int n=nl; n<=nus; ++n) {
+    for (int k=kl; k<=ku; ++k) {
+      for (int j=jl; j<=ju; ++j) {
+#pragma omp simd
+        for (int i=il; i<=iu; ++i) {
+          // Compute fourth-order approximation to cell-averaged primitive variables
+          r(n,k,j,i) = r_cc(n,k,j,i) + C*s_laplacian_cc(n,k,j,i);
+        }
+      }
+    }
+  }
 
   // Reapply primitive variable floors
   // Cannot fuse w/ above loop since floors are applied to all NHYDRO variables at once
@@ -91,6 +127,8 @@ void EquationOfState::ConservedToPrimitiveCellAverage(
 #pragma omp simd
       for (int i=il; i<=iu; ++i) {
         ApplyPrimitiveConservedFloors(prim, cons, bcc, r, s, k, j, i);
+        if (RELATIVISTIC_DYNAMICS && NSCALARS) // in this case scalars are not floored yet
+          ApplyPassiveScalarPrimitiveConservedFloors(s, prim, r, k, j, i);
       }
     }
   }

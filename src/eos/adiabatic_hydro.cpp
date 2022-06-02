@@ -119,7 +119,7 @@ void EquationOfState::PrimitiveToConserved(
     }
   }
   if (NSCALARS > 0)
-    PassiveScalarPrimitiveToConserved(r, prim, s, pco, il, iu, jl, ju, kl, ku);
+    PassiveScalarPrimitiveToConserved(r, cons, s, pco, il, iu, jl, ju, kl, ku);
   return;
 }
 

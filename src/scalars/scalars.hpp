@@ -20,6 +20,7 @@
 class MeshBlock;
 class ParameterInput;
 class Hydro;
+class EquationOfState;
 
 //! \class PassiveScalars
 //! \brief
@@ -57,7 +58,7 @@ class PassiveScalars {
   void AddFluxDivergence(const Real wght, AthenaArray<Real> &s_out);
   void AddFluxDivergence_STS(const Real wght, int stage,
                              AthenaArray<Real> &s_out, AthenaArray<Real> &s_flux_div_out);
-  void CalculateFluxes(AthenaArray<Real> &s, const int order);
+  //void CalculateFluxes(AthenaArray<Real> &s, const int order);
   void CalculateFluxes_STS();
 
   //! \note
@@ -108,5 +109,6 @@ class PassiveScalars {
   // TODO(felker): dedpulicate these arrays and the same named ones in HydroDiffusion
   AthenaArray<Real> dx1_, dx2_, dx3_;
   friend class Hydro;
+  friend class EquationOfState;
 };
 #endif // SCALARS_SCALARS_HPP_

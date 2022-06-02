@@ -908,9 +908,7 @@ TaskStatus SuperTimeStepTaskList::Primitives_STS(MeshBlock *pmb, int stage) {
       if (pmb->porb->orbital_advection_defined) {
         pmb->porb->ResetOrbitalSystemConversionFlag();
       }
-    }
-
-    if (do_sts_scalar) {
+    } else if (do_sts_scalar) {
       pmb->peos->PassiveScalarConservedToPrimitive(ps->s, ph->w,
                                                    ps->r, ps->r,
                                                    pmb->pcoord, il, iu, jl, ju, kl, ku);
@@ -946,8 +944,7 @@ TaskStatus SuperTimeStepTaskList::Primitives_STS(MeshBlock *pmb, int stage) {
                                                    (NSCALARS) ? ps->coarse_r_ : empty,
                                                    pmb->pcoord,
                                                    il, iu, jl, ju, kl, ku);
-      }
-      if (do_sts_scalar) {
+      } else if (do_sts_scalar) {
         pmb->peos->PassiveScalarConservedToPrimitiveCellAverage(
             ps->s, ps->r, ps->r, pmb->pcoord, il, iu, jl, ju, kl, ku);
       }

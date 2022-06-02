@@ -44,7 +44,8 @@
 void Reconstruction::PiecewiseParabolicX1(
     const int k, const int j, const int il, const int iu,
     const AthenaArray<Real> &w, const AthenaArray<Real> &bcc,
-    AthenaArray<Real> &wl, AthenaArray<Real> &wr) {
+    AthenaArray<Real> &wl, AthenaArray<Real> &wr,
+    const AthenaArray<Real> &r, AthenaArray<Real> &rl, AthenaArray<Real> &rr) {
   // CS08 constant used in second derivative limiter, >1 , independent of h
   const Real C2 = 1.25;
 
@@ -323,12 +324,13 @@ void Reconstruction::PiecewiseParabolicX1(
       wr(n,i  ) = qr_imh(n,i);
     }
   }
+  if (NSCALARS) PiecewiseParabolicX1(k, j, il, iu, r, rl, rr);
 #pragma omp simd
   for (int i=il; i<=iu; ++i) {
     // Reapply EOS floors to both L/R reconstructed primitive states
     // TODO(felker): check that fused loop with NWAVE redundant application is slower
-    pmy_block_->peos->ApplyPrimitiveFloors(wl, k, j, i+1);
-    pmy_block_->peos->ApplyPrimitiveFloors(wr, k, j, i);
+    pmy_block_->peos->ApplyPrimitiveFloors(wl, rl, k, j, i+1);
+    pmy_block_->peos->ApplyPrimitiveFloors(wr, rr, k, j, i);
   }
   return;
 }
@@ -344,7 +346,8 @@ void Reconstruction::PiecewiseParabolicX1(
 void Reconstruction::PiecewiseParabolicX2(
     const int k, const int j, const int il, const int iu,
     const AthenaArray<Real> &w, const AthenaArray<Real> &bcc,
-    AthenaArray<Real> &wl, AthenaArray<Real> &wr) {
+    AthenaArray<Real> &wl, AthenaArray<Real> &wr,
+    const AthenaArray<Real> &r, AthenaArray<Real> &rl, AthenaArray<Real> &rr) {
   // CS08 constant used in second derivative limiter, >1 , independent of h
   const Real C2 = 1.25;
 
@@ -622,11 +625,12 @@ void Reconstruction::PiecewiseParabolicX2(
       wr(n,i) = qr_jmh(n,i);
     }
   }
+  if (NSCALARS) PiecewiseParabolicX2(k, j, il, iu, r, rl, rr);
 #pragma omp simd
   for (int i=il; i<=iu; ++i) {
     // Reapply EOS floors to both L/R reconstructed primitive states
-    pmy_block_->peos->ApplyPrimitiveFloors(wl, k, j, i);
-    pmy_block_->peos->ApplyPrimitiveFloors(wr, k, j, i);
+    pmy_block_->peos->ApplyPrimitiveFloors(wl, rl, k, j, i);
+    pmy_block_->peos->ApplyPrimitiveFloors(wr, rr, k, j, i);
   }
   return;
 }
@@ -642,7 +646,8 @@ void Reconstruction::PiecewiseParabolicX2(
 void Reconstruction::PiecewiseParabolicX3(
     const int k, const int j, const int il, const int iu,
     const AthenaArray<Real> &w, const AthenaArray<Real> &bcc,
-    AthenaArray<Real> &wl, AthenaArray<Real> &wr) {
+    AthenaArray<Real> &wl, AthenaArray<Real> &wr,
+    const AthenaArray<Real> &r, AthenaArray<Real> &rl, AthenaArray<Real> &rr) {
   // CS08 constant used in second derivative limiter, >1 , independent of h
   const Real C2 = 1.25;
 
@@ -913,11 +918,12 @@ void Reconstruction::PiecewiseParabolicX3(
       wr(n,i) = qr_kmh(n,i);
     }
   }
+  if (NSCALARS) PiecewiseParabolicX3(k, j, il, iu, r, rl, rr);
 #pragma omp simd
   for (int i=il; i<=iu; ++i) {
     // Reapply EOS floors to both L/R reconstructed primitive states
-    pmy_block_->peos->ApplyPrimitiveFloors(wl, k, j, i);
-    pmy_block_->peos->ApplyPrimitiveFloors(wr, k, j, i);
+    pmy_block_->peos->ApplyPrimitiveFloors(wl, rl, k, j, i);
+    pmy_block_->peos->ApplyPrimitiveFloors(wr, rr, k, j, i);
   }
   return;
 }

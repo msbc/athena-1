@@ -228,8 +228,6 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   }
   peos->PrimitiveToConserved(phydro->w, bb, phydro->u, pscalars->r, pscalars->s, pcoord,
       is, ie, js, je, ks, ke);
-  peos->PassiveScalarPrimitiveToConserved(pscalars->r, phydro->u, pscalars->s, pcoord, is,
-      ie, js, je, ks, ke);
 
   // Initialize magnetic field
   if (MAGNETIC_FIELDS_ENABLED) {

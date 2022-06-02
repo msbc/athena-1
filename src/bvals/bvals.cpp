@@ -495,10 +495,6 @@ void BoundaryValues::ApplyPhysicalBoundaries(const Real time, const Real dt,
                                     (NSCALARS) ? ps->r : empty,
                                     (NSCALARS) ? ps->s : empty,
                                     pco, pmb->is-NGHOST, pmb->is-1, bjs, bje, bks, bke);
-    if (NSCALARS > 0) {
-      pmb->peos->PassiveScalarPrimitiveToConserved(
-          ps->r, ph->u, ps->s, pco, pmb->is-NGHOST, pmb->is-1, bjs, bje, bks, bke);
-    }
   }
 
   // Apply boundary function on outer-x1 and update W,bcc (if not periodic)
@@ -517,10 +513,6 @@ void BoundaryValues::ApplyPhysicalBoundaries(const Real time, const Real dt,
                                     (NSCALARS) ? ps->r : empty,
                                     (NSCALARS) ? ps->s : empty,
                                     pco, pmb->ie+1, pmb->ie+NGHOST, bjs, bje, bks, bke);
-    if (NSCALARS > 0) {
-      pmb->peos->PassiveScalarPrimitiveToConserved(
-          ps->r, ph->u, ps->s, pco, pmb->ie+1, pmb->ie+NGHOST, bjs, bje, bks, bke);
-    }
   }
 
   if (pmb->block_size.nx2 > 1) { // 2D or 3D
@@ -540,10 +532,6 @@ void BoundaryValues::ApplyPhysicalBoundaries(const Real time, const Real dt,
                                      (NSCALARS) ? ps->r : empty,
                                      (NSCALARS) ? ps->s : empty,
                                      pco, bis, bie, pmb->js-NGHOST, pmb->js-1, bks, bke);
-      if (NSCALARS > 0) {
-        pmb->peos->PassiveScalarPrimitiveToConserved(
-            ps->r, ph->u, ps->s, pco, bis, bie, pmb->js-NGHOST, pmb->js-1, bks, bke);
-      }
     }
 
     // Apply boundary function on outer-x2 and update W,bcc (if not periodic)
@@ -562,10 +550,6 @@ void BoundaryValues::ApplyPhysicalBoundaries(const Real time, const Real dt,
                                      (NSCALARS) ? ps->r : empty,
                                      (NSCALARS) ? ps->s : empty,
                                      pco, bis, bie, pmb->je+1, pmb->je+NGHOST, bks, bke);
-      if (NSCALARS > 0) {
-        pmb->peos->PassiveScalarPrimitiveToConserved(
-            ps->r, ph->u, ps->s, pco, bis, bie, pmb->je+1, pmb->je+NGHOST, bks, bke);
-      }
     }
   }
 
@@ -589,10 +573,6 @@ void BoundaryValues::ApplyPhysicalBoundaries(const Real time, const Real dt,
                                      (NSCALARS) ? ps->r : empty,
                                      (NSCALARS) ? ps->s : empty,
                                      pco, bis, bie, bjs, bje, pmb->ks-NGHOST, pmb->ks-1);
-      if (NSCALARS > 0) {
-        pmb->peos->PassiveScalarPrimitiveToConserved(
-            ps->r, ph->u, ps->s, pco, bis, bie, bjs, bje, pmb->ks-NGHOST, pmb->ks-1);
-      }
     }
 
     // Apply boundary function on outer-x3 and update W,bcc (if not periodic)
@@ -611,10 +591,6 @@ void BoundaryValues::ApplyPhysicalBoundaries(const Real time, const Real dt,
                                      (NSCALARS) ? ps->r : empty,
                                      (NSCALARS) ? ps->s : empty,
                                      pco, bis, bie, bjs, bje, pmb->ke+1, pmb->ke+NGHOST);
-      if (NSCALARS > 0) {
-        pmb->peos->PassiveScalarPrimitiveToConserved(
-            ps->r, ph->u, ps->s, pco, bis, bie, bjs, bje, pmb->ke+1, pmb->ke+NGHOST);
-      }
     }
   }
   return;

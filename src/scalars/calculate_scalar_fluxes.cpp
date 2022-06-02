@@ -25,6 +25,7 @@
 #include <omp.h>
 #endif
 
+#if 0
 //----------------------------------------------------------------------------------------
 //! \fn  void PassiveScalars::CalculateFluxes
 //! \brief Calculate passive scalar fluxes using reconstruction + weighted upwinding rule
@@ -354,7 +355,7 @@ void PassiveScalars::CalculateFluxes(AthenaArray<Real> &r, const int order) {
   }
   return;
 }
-
+#endif
 
 void PassiveScalars::CalculateFluxes_STS() {
   AddDiffusionFluxes();

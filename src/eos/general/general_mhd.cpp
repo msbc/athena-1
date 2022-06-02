@@ -285,6 +285,7 @@ void EquationOfState::ApplyPrimitiveConservedFloors(
   if (w_d < density_floor_) {
     w_d = density_floor_;
     for (int n=0; n<NSCALARS; ++n) {
+      // should be u_d instead but since this is non-rel u_d=w_d
       s(n,k,j,i) = r(n,k,j,i) * w_d;
     }
   }
@@ -302,6 +303,7 @@ void EquationOfState::ApplyPrimitiveConservedFloors(
       Real& s_n  = s(n,k,j,i);
       Real& r_n  = r(n,k,j,i);
 
+      // should be u_d instead but since this is non-rel u_d=w_d
       s_n = (s_n < scalar_floor_*w_d) ?  scalar_floor_*w_d : s_n;
 
       // this next line, when applied indiscriminately, erases the accuracy gains performed in

@@ -36,13 +36,18 @@ def analyze():
     # Check that fractional concentration is correct on either side of contact
     analyze_status = True
     for n, x_lim in zip(range(1, 5), x_lims):
+        local_status = True
         data = athena_read.tab('bin/hydro_shock_rel_{0}.block0.out1.00001.tab'.format(n))
         x = data['x1v']
         chi = data['r0']
         chi_left = chi[np.where(x <= x_lim[0])[0]]
         chi_right = chi[np.where(x >= x_lim[1])[0]]
         if not np.allclose(chi_left, 0.0):
-            analyze_status = False
+            analyze_status = local_status = False
         if not np.allclose(chi_right, 1.0):
-            analyze_status = False
+            analyze_status = local_status = False
+        if not local_status:
+            print(n, x_lim)
+            print(chi_left)
+            print(chi_right)
     return analyze_status

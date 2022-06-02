@@ -124,7 +124,6 @@ void EquationOfState::PassiveScalarConservedToPrimitiveCellAverage(
   return;
 }
 
-
 //----------------------------------------------------------------------------------------
 //! \fn void EquationOfState::PassiveScalarPrimitiveToConserved(const AthenaArray<Real> &r
 //!           const AthenaArray<Real> &u, AthenaArray<Real> &s, Coordinates *pco,

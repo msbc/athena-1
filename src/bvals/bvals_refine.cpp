@@ -398,13 +398,6 @@ void BoundaryValues::ApplyPhysicalBoundariesOnCoarseLevel(
                                   (NSCALARS) ? ps->coarse_r_ : empty,
                                   pmr->pcoarsec,
                                   si-f1m, ei+f1p, sj-f2m, ej+f2p, sk-f3m, ek+f3p);
-  if (NSCALARS > 0) {
-    pmb->peos->PassiveScalarConservedToPrimitive(ps->coarse_s_, ph->coarse_cons_,
-                                                 ps->coarse_r_, ps->coarse_r_,
-                                                 pmr->pcoarsec,
-                                                 si-f1m, ei+f1p, sj-f2m, ej+f2p,
-                                                 sk-f3m, ek+f3p);
-  }
 
   if (nb.ni.ox1 == 0) {
     if (apply_bndry_fn_[BoundaryFace::inner_x1]) {
@@ -573,9 +566,5 @@ void BoundaryValues::ProlongateGhostCells(const NeighborBlock& nb,
                                   (NSCALARS) ? ps->s : empty,
                                   pmb->pcoord,
                                   fsi, fei, fsj, fej, fsk, fek);
-  if (NSCALARS > 0) {
-    pmb->peos->PassiveScalarPrimitiveToConserved(ps->r, ph->w, ps->s, pmb->pcoord,
-                                                 fsi, fei, fsj, fej, fsk, fek);
-  }
   return;
 }

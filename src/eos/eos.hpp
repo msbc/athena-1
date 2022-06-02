@@ -30,7 +30,6 @@ struct FaceField;
 //! \brief data and functions that implement EoS
 
 class EquationOfState {
-  friend class Hydro;
  public:
   EquationOfState(MeshBlock *pmb, ParameterInput *pin);
 
@@ -96,7 +95,7 @@ class EquationOfState {
   Real FastMagnetosonicSpeed(const Real[], const Real) {return 0.0;}
   void ApplyPrimitiveConservedFloors(
       AthenaArray<Real> &, AthenaArray<Real> &, AthenaArray<Real> &,
-      int, int, int) {return;}
+      AthenaArray<Real> &, AthenaArray<Real> &, int, int, int) {return;}
 #if !MAGNETIC_FIELDS_ENABLED  // SR hydro: SR MHD defined as no-op
 #pragma omp declare simd simdlen(SIMD_WIDTH) uniform(this)
   void SoundSpeedsSR(Real rho_h, Real pgas, Real vx, Real gamma_lorentz_sq,
@@ -116,7 +115,7 @@ class EquationOfState {
   Real FastMagnetosonicSpeed(const Real[], const Real) {return 0.0;}
   void ApplyPrimitiveConservedFloors(
       AthenaArray<Real> &, AthenaArray<Real> &, AthenaArray<Real> &,
-      int, int, int) {return;}
+      AthenaArray<Real> &, AthenaArray<Real> &, int, int, int) {return;}
 #if !MAGNETIC_FIELDS_ENABLED  // GR hydro: GR+SR MHD defined as no-op
 #pragma omp declare simd simdlen(SIMD_WIDTH) uniform(this)
   void SoundSpeedsSR(Real rho_h, Real pgas, Real vx, Real gamma_lorentz_sq,
@@ -154,6 +153,15 @@ class EquationOfState {
 #else // not GENERAL_EOS
   Real GetGamma() const {return gamma_;}
 #endif
+#pragma omp declare simd simdlen(SIMD_WIDTH) uniform(this,s,k,j) linear(i)
+  void ApplyPassiveScalarFloors(AthenaArray<Real> &s, int k, int j, int i);
+  void PassiveScalarConservedToPrimitive(
+    AthenaArray<Real> &s, const AthenaArray<Real> &u, const AthenaArray<Real> &r_old,
+    AthenaArray<Real> &r,
+    Coordinates *pco, int il, int iu, int jl, int ju, int kl, int ku);
+  void PassiveScalarConservedToPrimitiveCellAverage(
+    AthenaArray<Real> &s, const AthenaArray<Real> &r_old, AthenaArray<Real> &r,
+    Coordinates *pco, int il, int iu, int jl, int ju, int kl, int ku);
 
  private:
   // (C++11) in-class Default Member Initializer (fallback option):
@@ -178,20 +186,11 @@ class EquationOfState {
   AthenaArray<Real> normal_tt_;          // normal-frame M.B, used in relativistic MHD
   void InitEosConstants(ParameterInput *pin);
 
-  void PassiveScalarConservedToPrimitive(
-    AthenaArray<Real> &s, const AthenaArray<Real> &u, const AthenaArray<Real> &r_old,
-    AthenaArray<Real> &r,
-    Coordinates *pco, int il, int iu, int jl, int ju, int kl, int ku);
   void PassiveScalarPrimitiveToConserved(
     const AthenaArray<Real> &r, const AthenaArray<Real> &u,
     AthenaArray<Real> &s, Coordinates *pco,
     int il, int iu, int jl, int ju, int kl, int ku);
-  void PassiveScalarConservedToPrimitiveCellAverage(
-    AthenaArray<Real> &s, const AthenaArray<Real> &r_old, AthenaArray<Real> &r,
-    Coordinates *pco, int il, int iu, int jl, int ju, int kl, int ku);
-#pragma omp declare simd simdlen(SIMD_WIDTH) uniform(this,s,n,k,j) linear(i)
-  void ApplyPassiveScalarFloors(AthenaArray<Real> &s, int k, int j, int i);
-#pragma omp declare simd simdlen(SIMD_WIDTH) uniform(this,s,w,r,n,k,j) linear(i)
+#pragma omp declare simd simdlen(SIMD_WIDTH) uniform(this,s,w,r,k,j) linear(i)
   void ApplyPassiveScalarPrimitiveConservedFloors(
     AthenaArray<Real> &s, const AthenaArray<Real> &w, AthenaArray<Real> &r,
     int k, int j, int i);

@@ -2002,11 +2002,6 @@ TaskStatus TimeIntegratorTaskList::Primitives(MeshBlock *pmb, int stage) {
     if (pmb->porb->orbital_advection_defined) {
       pmb->porb->ResetOrbitalSystemConversionFlag();
     }
-    if (NSCALARS > 0) {
-      // r1/r_old for GR is currently unused:
-      pmb->peos->PassiveScalarConservedToPrimitive(ps->s, ph->u, ps->r, ps->r,
-                                                   pmb->pcoord, il, iu, jl, ju, kl, ku);
-    }
     // fourth-order EOS:
     if (pmb->precon->xorder == 4) {
       // for hydro, shrink buffer by 1 on all sides
@@ -2038,10 +2033,6 @@ TaskStatus TimeIntegratorTaskList::Primitives(MeshBlock *pmb, int stage) {
                                                  (NSCALARS) ? ps->r : empty,
                                                  pmb->pcoord,
                                                  il, iu, jl, ju, kl, ku);
-      if (NSCALARS > 0) {
-        pmb->peos->PassiveScalarConservedToPrimitiveCellAverage(
-            ps->s, ps->r, ps->r, pmb->pcoord, il, iu, jl, ju, kl, ku);
-      }
     }
     // swap AthenaArray data pointers so that w now contains the updated w_out
     ph->w.SwapAthenaArray(ph->w1);
