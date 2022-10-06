@@ -226,7 +226,7 @@ void EquationOfState::PrimitiveToConserved(const AthenaArray<Real> &prim,
 //! \brief returns adiabatic sound speed given vector of primitive variables
 
 Real EquationOfState::SoundSpeed(const Real prim[NHYDRO+NSCALARS]) {
-  return std::sqrt(AsqFromRhoP(prim[IDN], prim[IPR], prim+NSCALARS));
+  return std::sqrt(AsqFromRhoP(prim[IDN], prim[IPR], prim+NHYDRO));
 }
 
 //----------------------------------------------------------------------------------------
@@ -236,7 +236,7 @@ Real EquationOfState::SoundSpeed(const Real prim[NHYDRO+NSCALARS]) {
 Real EquationOfState::FastMagnetosonicSpeed(const Real prim[(NWAVE+NSCALARS)],
                                             const Real bx) {
   // Actually rho*asq
-  Real asq = AsqFromRhoP(prim[IDN], prim[IPR], prim+NHYDRO) * prim[IDN];
+  Real asq = AsqFromRhoP(prim[IDN], prim[IPR], prim+NWAVE) * prim[IDN];
   Real vaxsq = bx*bx;
   Real ct2 = (prim[IBY]*prim[IBY] + prim[IBZ]*prim[IBZ]);
   Real qsq = vaxsq + ct2 + asq;

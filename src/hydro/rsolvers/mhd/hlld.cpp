@@ -81,8 +81,8 @@ void Hydro::RiemannSolver(const int k, const int j, const int il, const int iu,
 
     if (GENERAL_EOS) {
       for (int n=0; n<NSCALARS; ++n) {
-        wli[NHYDRO+n]=rl(n,i);
-        wri[NHYDRO+n]=rr(n,i);
+        wli[NWAVE+n]=rl(n,i);
+        wri[NWAVE+n]=rr(n,i);
       }
     }
 
@@ -101,7 +101,7 @@ void Hydro::RiemannSolver(const int k, const int j, const int il, const int iu,
     ul.my = wli[IVY]*ul.d;
     ul.mz = wli[IVZ]*ul.d;
     if (GENERAL_EOS) {
-      ul.e  = peos->EgasFromRhoP(ul.d, wli[IPR], wli + NSCALARS) + kel + pbl;
+      ul.e  = peos->EgasFromRhoP(ul.d, wli[IPR], wli + NWAVE) + kel + pbl;
     } else {
       ul.e  = wli[IPR]*igm1 + kel + pbl;
     }
@@ -113,7 +113,7 @@ void Hydro::RiemannSolver(const int k, const int j, const int il, const int iu,
     ur.my = wri[IVY]*ur.d;
     ur.mz = wri[IVZ]*ur.d;
     if (GENERAL_EOS) {
-      ur.e  = peos->EgasFromRhoP(ur.d, wri[IPR], wri + NSCALARS) + ker + pbr;
+      ur.e  = peos->EgasFromRhoP(ur.d, wri[IPR], wri + NWAVE) + ker + pbr;
     } else {
       ur.e  = wri[IPR]*igm1 + ker + pbr;
     }
