@@ -29,8 +29,6 @@ struct Cons1D {
   Real d, mx, my, mz, e, by, bz;
 };
 
-#define SMALL_NUMBER 1.0e-8
-
 //----------------------------------------------------------------------------------------
 //! \fn void Hydro::RiemannSolver
 //! \brief The HLLD Riemann solver for adiabatic MHD
@@ -49,6 +47,7 @@ void Hydro::RiemannSolver(const int k, const int j, const int il, const int iu,
   // L/R states, primitive variables (input)
   Real wli[(NWAVE+NSCALARS*GENERAL_EOS)],wri[(NWAVE+NSCALARS*GENERAL_EOS)];
   Real spd[5];         // signal speeds, left to right
+  constexpr Real SMALL_NUMBER = 1.0e-4;
 
   Real igm1;
   EquationOfState *peos = pmy_block->peos;
