@@ -44,9 +44,10 @@ void Hydro::NewBlockTimeStep() {
   int is = pmb->is; int js = pmb->js; int ks = pmb->ks;
   int ie = pmb->ie; int je = pmb->je; int ke = pmb->ke;
   AthenaArray<Real> &w = pmb->phydro->w;
+  AthenaArray<Real> &r = pmb->pscalars->r;
   // hyperbolic timestep constraint in each (x1-slice) cell along coordinate direction:
   AthenaArray<Real> &dt1 = dt1_, &dt2 = dt2_, &dt3 = dt3_;  // (x1 slices)
-  Real wi[NWAVE];
+  Real wi[NWAVE+NSCALARS*GENERAL_EOS];
 
   Real real_max = std::numeric_limits<Real>::max();
   Real min_dt = real_max;
@@ -93,6 +94,9 @@ void Hydro::NewBlockTimeStep() {
               wi[IBY] = bcc(IB1,k,j,i);
               wi[IBZ] = bcc(IB2,k,j,i);
               bx = bcc(IB3,k,j,i) + std::abs(b_x3f(k,j,i) - bcc(IB3,k,j,i));
+              if (GENERAL_EOS) {
+                for (int n=0; n<NSCALARS; ++n) wi[NWAVE+n] = r(n,k,j,i);
+              }
               cf = pmb->peos->FastMagnetosonicSpeed(wi,bx);
               dt3(i) /= (std::abs(wi[IVZ]) + cf);
             } else {

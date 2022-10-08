@@ -77,8 +77,8 @@ void Hydro::RiemannSolver(const int k, const int j, const int il, const int iu,
 
     if (GENERAL_EOS) {
       for (int n=0; n<NSCALARS; ++n) {
-        wli[NHYDRO+n]=rl(n,i);
-        wri[NHYDRO+n]=rr(n,i);
+        wli[NWAVE+n]=rl(n,i);
+        wri[NWAVE+n]=rr(n,i);
       }
     }
 
