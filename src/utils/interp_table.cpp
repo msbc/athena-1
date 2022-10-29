@@ -299,7 +299,7 @@ Real inline interp_1d(Real x, Real *data, int n, int stride=1) {
 
 //! nD-linear interpolation
 Real inline interp_nd(int nd, int *shape, Real *indices, Real *data,
-                      int *strides=nullptr) {
+                      int *strides) {
   int n = shape[0];
   Real x = indices[0];
   if (nd == 1) {
