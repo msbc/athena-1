@@ -127,7 +127,7 @@ void EquationOfState::ConservedToPrimitiveCellAverage(
 #pragma omp simd
       for (int i=il; i<=iu; ++i) {
         ApplyPrimitiveConservedFloors(prim, cons, bcc, r, s, k, j, i);
-        if (RELATIVISTIC_DYNAMICS && NSCALARS) // in this case scalars are not floored yet
+        if (RELATIVISTIC_DYNAMICS & NSCALARS) // in this case scalars are not floored yet
           ApplyPassiveScalarPrimitiveConservedFloors(s, prim, r, k, j, i);
       }
     }
