@@ -36,6 +36,7 @@ HydroSourceTerms::HydroSourceTerms(Hydro *phyd, ParameterInput *pin) {
   // set the point source only when the coordinate is spherical or 2D
   // It works even for cylindrical with the orbital advection.
   flag_point_mass_ = false;
+  flag_m_of_r_ = false;
   gm_ = pin->GetOrAddReal("problem","GM",0.0);
   bool orbital_advection_defined
          = (pin->GetOrAddInteger("orbital_advection","OAorder",0)!=0)?
@@ -64,6 +65,40 @@ HydroSourceTerms::HydroSourceTerms(Hydro *phyd, ParameterInput *pin) {
       flag_point_mass_ = true;
       hydro_sourceterms_defined = true;
     }
+  }
+  g_newt_ = pin->GetOrAddReal("problem","G_Newt",0.0);
+  m_int_ = pin->GetOrAddReal("problem","interior_mass",0.0);
+  if (g_newt_ != 0.0) {
+    if (std::strcmp(COORDINATE_SYSTEM, "spherical_polar") != 0
+        && std::strcmp(COORDINATE_SYSTEM, "cylindrical") != 0) {
+      std::stringstream msg;
+      msg << "### FATAL ERROR in HydroSourceTerms constructor" << std::endl
+          << "The M(r) gravity works only in the cylindrical and "
+          << "spherical polar coordinates." << std::endl
+          << "Check <problem> G_Newt parameter in the input file." << std::endl;
+      ATHENA_ERROR(msg);
+    }
+    if (orbital_advection_defined) {
+      hydro_sourceterms_defined = true;
+    } else if (std::strcmp(COORDINATE_SYSTEM, "cylindrical") == 0
+               && phyd->pmy_block->block_size.nx3>1) {
+      std::stringstream msg;
+      msg << "### FATAL ERROR in HydroSourceTerms constructor" << std::endl
+          << "The M(r) gravity deos not work in the 3D cylindrical "
+          << "coordinates without orbital advection." << std::endl
+          << "Check <problem> G_Newt parameter in the input file." << std::endl;
+      ATHENA_ERROR(msg);
+    } else {
+      flag_m_of_r_ = true;
+      hydro_sourceterms_defined = true;
+    }
+  }
+  if (flag_point_mass_ && flag_m_of_r_) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in HydroSourceTerms constructor" << std::endl
+        << "The point mass gravity and M(r) gravity cannot be used together." << std::endl
+        << "Check <problem> GM or G_Newt parameter in the input file." << std::endl;
+    ATHENA_ERROR(msg);
   }
   g1_ = pin->GetOrAddReal("hydro","grav_acc1",0.0);
   if (g1_ != 0.0) hydro_sourceterms_defined = true;
@@ -127,6 +162,8 @@ void HydroSourceTerms::AddSourceTerms(const Real time, const Real dt,
   // accleration due to point mass (MUST BE AT ORIGIN)
   if (flag_point_mass_)
     PointMass(dt, flux, prim, cons);
+  if (flag_m_of_r_)
+    MofR(dt, flux, prim, cons);
 
   // constant acceleration (e.g. for RT instability)
   if (g1_ != 0.0 || g2_ != 0.0 || g3_ != 0.0)

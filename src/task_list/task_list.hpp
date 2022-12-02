@@ -207,6 +207,11 @@ class TimeIntegratorTaskList : public TaskList {
   TaskStatus ReceiveFieldOrbital(MeshBlock *pmb, int stage);
   TaskStatus CalculateFieldOrbital(MeshBlock *pmb, int stage);
 
+  TaskStatus CalculateMassShell(MeshBlock *pmb, int stage);
+  TaskStatus SendEnclosedMass(MeshBlock *pmb, int stage);
+  TaskStatus ReceiveEnclosedMass(MeshBlock *pmb, int stage);
+
+
   bool CheckNextMainStage(int stage) const {return stage_wghts[stage%nstages].main_stage;}
 
  private:
@@ -348,6 +353,10 @@ const TaskID CALC_HYDORB(64);
 const TaskID SEND_FLDORB(65);
 const TaskID RECV_FLDORB(66);
 const TaskID CALC_FLDORB(67);
+
+const TaskID CALC_M(68);
+const TaskID SEND_M(69);
+const TaskID RECV_M(70);
 
 }  // namespace HydroIntegratorTaskNames
 #endif  // TASK_LIST_TASK_LIST_HPP_

@@ -550,6 +550,17 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
 
   if (turb_flag > 0) // TurbulenceDriver depends on the MeshBlock ctor
     ptrbd = new TurbulenceDriver(this, pin);
+
+  // initialize the M(r) (gravity) array
+  if (my_blocks(0)->phydro->hsrc.DoMofR()) {
+    if (max_level != current_level) {
+      msg << "### FATAL ERROR in Mesh constructor" << std::endl
+          << "Mesh refinement is not supported for M(r) gravity" << std::endl;
+      ATHENA_ERROR(msg);
+    }
+    //m_of_r.NewAthenaArray(mesh_size.nx1*(1LL<<max_level));
+    m_of_r.NewAthenaArray(mesh_size.nx1);
+  }
 }
 
 //----------------------------------------------------------------------------------------
@@ -2002,4 +2013,40 @@ void Mesh::OutputCycleDiagnostics() {
     }
   }
   return;
+}
+
+#ifdef MPI_PARALLEL
+static MPI_Request request;
+#endif
+static int mass_flag = 0;
+
+void Mesh::SendEnclosedMass() {
+#ifdef MPI_PARALLEL
+  if (mass_flag) return;
+  MPI_Iallreduce(m_of_r.data(), m_of_r.data(), m_of_r.GetSize(), MPI_ATHENA_REAL, MPI_SUM,
+                 MPI_COMM_WORLD, &request);
+  mass_flag = 1;
+#endif
+}
+
+bool Mesh::ReceiveEnclosedMass() {
+#ifdef MPI_PARALLEL
+  if (!mass_flag) return true;
+  int test;
+  // probe MPI communications.  This is a bit of black magic that seems to promote
+  // communications to top of stack and gets them to complete more quickly
+  MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &test,
+             MPI_STATUS_IGNORE);
+  MPI_Test(&request, &test, MPI_STATUS_IGNORE);
+  if (static_cast<bool>(test)) {
+    m_of_r(0) += my_blocks(0)->phydro->hsrc.GetM_Int();
+    for (int i=1; i<m_of_r.GetDim1(); ++i) {
+      m_of_r(i) += m_of_r(i-1);
+    }
+    mass_flag = 0;
+    return true;
+  }
+  return false;
+#endif
+  return true;
 }

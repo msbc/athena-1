@@ -43,3 +43,31 @@ void HydroSourceTerms::PointMass(const Real dt, const AthenaArray<Real> *flux,
 
   return;
 }
+
+//----------------------------------------------------------------------------------------
+//! \fn void HydroSourceTerms::m_of_r
+//! \brief Adds source terms due to mass as a function of radius
+
+void HydroSourceTerms::MofR(const Real dt, const AthenaArray<Real> *flux,
+                            const AthenaArray<Real> &prim, AthenaArray<Real> &cons) {
+  MeshBlock *pmb = pmy_hydro_->pmy_block;
+  AthenaArray<Real> &m = pmb->pmy_mesh->m_of_r;
+  for (int k=pmb->ks; k<=pmb->ke; ++k) {
+    for (int j=pmb->js; j<=pmb->je; ++j) {
+#pragma omp simd
+      for (int i=pmb->is; i<=pmb->ie; ++i) {
+        Real gm = g_newt_*m(i);
+        Real den = prim(IDN,k,j,i);
+        Real src = dt*den*pmb->pcoord->coord_src1_i_(i)*gm/pmb->pcoord->x1v(i);
+        cons(IM1,k,j,i) -= src;
+        if (NON_BAROTROPIC_EOS) {
+          cons(IEN,k,j,i) -=
+              dt*0.5*(pmb->pcoord->phy_src1_i_(i)*flux[X1DIR](IDN,k,j,i)*gm
+                      +pmb->pcoord->phy_src2_i_(i)*flux[X1DIR](IDN,k,j,i+1)*gm);
+        }
+      }
+    }
+  }
+
+  return;
+}

@@ -936,10 +936,14 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
     } else {
       AddTask(INT_HYD, CALC_HYDFLX);
     }
+    // Calculate M(r) for gravity
+    AddTask(CALC_M,INT_HYD);
+    AddTask(SEND_M,CALC_M);
+    AddTask(RECV_M,SEND_M);
     if (NSCALARS > 0) {
-      AddTask(SRC_TERM,(INT_HYD|INT_SCLR));
+      AddTask(SRC_TERM,(INT_HYD|INT_SCLR|RECV_M));
     } else {
-      AddTask(SRC_TERM,INT_HYD);
+      AddTask(SRC_TERM,(INT_HYD|RECV_M));
     }
     if (ORBITAL_ADVECTION) {
       AddTask(SEND_HYDORB,SRC_TERM);
@@ -1375,6 +1379,21 @@ void TimeIntegratorTaskList::AddTask(const TaskID& id, const TaskID& dep) {
         static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
         (&TimeIntegratorTaskList::CalculateFieldOrbital);
     task_list_[ntasks].lb_time = true;
+  } else if (id == CALC_M) {
+    task_list_[ntasks].TaskFunc=
+        static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
+        (&TimeIntegratorTaskList::CalculateMassShell);
+    task_list_[ntasks].lb_time = true;
+  } else if (id == SEND_M) {
+    task_list_[ntasks].TaskFunc=
+        static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
+        (&TimeIntegratorTaskList::SendEnclosedMass);
+    task_list_[ntasks].lb_time = true;
+  } else if (id == RECV_M) {
+    task_list_[ntasks].TaskFunc=
+        static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
+        (&TimeIntegratorTaskList::ReceiveEnclosedMass);
+    task_list_[ntasks].lb_time = true;
   } else {
     std::stringstream msg;
     msg << "### FATAL ERROR in AddTask" << std::endl
@@ -1468,6 +1487,11 @@ TaskStatus TimeIntegratorTaskList::CalculateHydroFlux(MeshBlock *pmb, int stage)
   Hydro *phydro = pmb->phydro;
   Field *pfield = pmb->pfield;
   AthenaArray<Real> &r = (NSCALARS) ? pmb->pscalars->r : phydro->w;
+
+  // clear M(r) for later use in gravity
+  if (pmb == pmb->pmy_mesh->my_blocks(0) && pmb->phydro->hsrc.DoMofR()) {
+    pmb->pmy_mesh->m_of_r.ZeroClear();
+  }
 
   if (stage <= nstages) {
     if (stage_wghts[stage-1].main_stage) {
@@ -2412,4 +2436,22 @@ TaskStatus TimeIntegratorTaskList::CalculateFieldOrbital(MeshBlock *pmb, int sta
     return TaskStatus::success;
   }
   return TaskStatus::fail;
+}
+
+TaskStatus TimeIntegratorTaskList::CalculateMassShell(MeshBlock *pmb, int stage) {
+  pmb->CalculateMassShell();
+  return TaskStatus::success;
+}
+
+TaskStatus TimeIntegratorTaskList::SendEnclosedMass(MeshBlock *pmb, int stage) {
+  pmb->pmy_mesh->SendEnclosedMass();
+  return TaskStatus::success;
+}
+
+TaskStatus TimeIntegratorTaskList::ReceiveEnclosedMass(MeshBlock *pmb, int stage) {
+  if (pmb->pmy_mesh->ReceiveEnclosedMass()) {
+    return TaskStatus::success;
+  } else {
+    return TaskStatus::fail;
+  }
 }

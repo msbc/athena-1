@@ -549,3 +549,19 @@ void MeshBlock::RegisterMeshBlockData(FaceField &pvar_fc) {
 //   }
 //   return;
 // }
+
+void MeshBlock::CalculateMassShell() {
+  AthenaArray<Real> dv;
+  dv.NewAthenaArray(block_size.nx1);
+  int i0 = loc.lx1 * block_size.nx1 - is;
+  for (int k=ks; k<=ke; k++) {
+    for (int j=js; j<=je; j++) {
+      pcoord->CellVolume(k, j, is, ie, dv);
+#pragma omp simd
+      for (int i=is; i<=ie; i++) {
+        pmy_mesh->m_of_r(i0 + i) += phydro->w(IDN,k,j,i)*dv(i);
+      }
+    }
+  }
+}
+

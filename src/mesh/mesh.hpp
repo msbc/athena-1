@@ -143,6 +143,8 @@ class MeshBlock {
   void UserWorkBeforeOutput(ParameterInput *pin); // called in Mesh fn (friend class)
   void UserWorkInLoop();                          // called in TimeIntegratorTaskList
 
+  void CalculateMassShell();
+
  private:
   // data
   Real new_block_dt_, new_block_dt_hyperbolic_, new_block_dt_parabolic_,
@@ -245,6 +247,7 @@ class Mesh {
   FFTGravityDriver *pfgrd;
   MGGravityDriver *pmgrd;
 
+  AthenaArray<Real> m_of_r;
   AthenaArray<Real> *ruser_mesh_data;
   AthenaArray<int> *iuser_mesh_data;
 
@@ -266,6 +269,9 @@ class Mesh {
   // defined in either the prob file or default_pgen.cpp in ../pgen/
   void UserWorkAfterLoop(ParameterInput *pin);   // called in main loop
   void UserWorkInLoop(); // called in main after each cycle
+
+  void SendEnclosedMass();
+  bool ReceiveEnclosedMass();
 
  private:
   // data

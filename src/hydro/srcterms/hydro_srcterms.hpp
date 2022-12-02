@@ -34,6 +34,9 @@ class HydroSourceTerms {
   Real GetG1() const {return g1_;}
   Real GetG2() const {return g2_;}
   Real GetG3() const {return g3_;}
+  Real GetG_Newt() const {return g_newt_;}
+  Real GetM_Int() const {return m_int_;}
+  bool DoMofR() const {return flag_m_of_r_;}
 
   // data
   bool hydro_sourceterms_defined;
@@ -46,6 +49,8 @@ class HydroSourceTerms {
                       AthenaArray<Real> &cons_scalar);
   void PointMass(const Real dt, const AthenaArray<Real> *flx,const AthenaArray<Real> &p,
                  AthenaArray<Real> &c);
+  void MofR(const Real dt, const AthenaArray<Real> *flx,const AthenaArray<Real> &p,
+            AthenaArray<Real> &c);
   void ConstantAcceleration(const Real dt, const AthenaArray<Real> *flx,
                             const AthenaArray<Real> &p, AthenaArray<Real> &c);
   // shearing box src terms
@@ -65,10 +70,13 @@ class HydroSourceTerms {
  private:
   Hydro *pmy_hydro_;  // ptr to Hydro containing this HydroSourceTerms
   Real gm_;           // GM for point mass MUST BE LOCATED AT ORIGIN
+  Real g_newt_;       // Newton's gravitational constant of M(r) gravity
+  Real m_int_;        // mass of point mass interior to simulation domain for M(r) gravity
   Real g1_, g2_, g3_; // constant acc'n in each direction
   Real Omega_0_, qshear_; // Orbital freq and shear rate
   int  ShBoxCoord_;       // ShearCoordinate type: 1=xy (default), 2=xz
   bool flag_point_mass_;      // flag for calling PointMass function
+  bool flag_m_of_r_;          // flag for calling MofR function
   int  flag_shearing_source_; // 1=orbital advection, 2=shearing box, 3=rotating system
 };
 #endif // HYDRO_SRCTERMS_HYDRO_SRCTERMS_HPP_
