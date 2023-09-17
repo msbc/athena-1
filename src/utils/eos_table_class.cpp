@@ -128,6 +128,127 @@ void ReadAsciiTable(std::string fn, EosTable *peos_table, ParameterInput *pin) {
   }
 }
 
+void ReadHelmTable(std::string fn, EosTable *peos_table, ParameterInput *pin) {
+  int jmax, imax;
+  Real tlo, thi; // log temperature limits
+  Real dlo, dhi; // log density limits
+  if (pin->GetOrAddBoolean("hydro", "helm_assume_defaults", false)) {
+    jmax = pin->GetOrAddInteger("hydro", "helm_temp_n", 201);
+    tlo  = pin->GetOrAddReal("hydro", "helm_temp_log_min",  3.0);
+    thi  = pin->GetOrAddReal("hydro", "helm_temp_log_max", 13.0);
+    imax = pin->GetOrAddInteger("hydro", "helm_dens_n", 541);
+    dlo  = pin->GetOrAddReal("hydro", "helm_dens_log_min", -12.0);
+    dhi  = pin->GetOrAddReal("hydro", "helm_dens_log_max",  15.0);
+  } else {
+    jmax = pin->GetInteger("hydro", "helm_temp_n");
+    tlo  = pin->GetReal("hydro", "helm_temp_log_min");
+    thi  = pin->GetReal("hydro", "helm_temp_log_max");
+    imax = pin->GetInteger("hydro", "helm_dens_n");
+    dlo  = pin->GetReal("hydro", "helm_dens_log_min");
+    dhi  = pin->GetReal("hydro", "helm_dens_log_max");
+  }
+  //Real tstp  = (thi - tlo)/float(jmax-1);
+  //Real tstpi = 1.0/tstp;
+  //Real dstp  = (dhi - dlo)/float(imax-1);
+  //Real dstpi = 1.0/dstp;
+
+  //init table
+  peos_table->table.SetSize(17, imax, jmax);
+  peos_table->table.SetX1lim(dlo, dhi);
+  peos_table->table.SetX2lim(tlo, thi);
+  peos_table->table.GetSize(peos_table->nVar, peos_table->nRho, peos_table->nEgas);
+  peos_table->table.GetX1lim(peos_table->logRhoMin, peos_table->logRhoMax);
+  peos_table->table.GetX2lim(peos_table->logEgasMin, peos_table->logEgasMax);
+  peos_table->EosRatios.NewAthenaArray(peos_table->nVar);
+  for (int i=0; i<peos_table->nVar; ++i) peos_table->EosRatios(i) = 1.0;
+
+  std::ifstream file(fn.c_str(), std::ios::in);
+  if (! file.good()) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in EosTable::EosTable, ReadHelmTable" << std::endl
+        << "Table data unreadable." << std::endl;
+    ATHENA_ERROR(msg);
+  }
+
+  // read the helmholtz free energy and its derivatives
+  AthenaArray<Real> f, fd, ft, fdd, ftt, fdt, fddt, fdtt, fddtt;
+  f.InitWithShallowSlice(peos_table->table.data, 3, 0, 1);
+  fd.InitWithShallowSlice(peos_table->table.data, 3, 1, 1);
+  ft.InitWithShallowSlice(peos_table->table.data, 3, 2, 1);
+  fdd.InitWithShallowSlice(peos_table->table.data, 3, 3, 1);
+  ftt.InitWithShallowSlice(peos_table->table.data, 3, 4, 1);
+  fdt.InitWithShallowSlice(peos_table->table.data, 3, 5, 1);
+  fddt.InitWithShallowSlice(peos_table->table.data, 3, 6, 1);
+  fdtt.InitWithShallowSlice(peos_table->table.data, 3, 7, 1);
+  fddtt.InitWithShallowSlice(peos_table->table.data, 3, 8, 1);
+
+  std::string line;
+  for (int j=0; j<jmax; ++j) {
+    for (int i=0; i<imax; ++i) {
+      while (std::getline(file, line) && (line[0] == '#')) continue;
+      std::stringstream lstream(line);
+      lstream >> f(i,j);
+      lstream >> fd(i,j);
+      lstream >> ft(i,j);
+      lstream >> fdd(i,j);
+      lstream >> ftt(i,j);
+      lstream >> fdt(i,j);
+      lstream >> fddt(i,j);
+      lstream >> fdtt(i,j);
+      lstream >> fddtt(i,j);
+    }
+  }
+
+  // read the pressure derivative with density table
+  AthenaArray<Real> dpdf, dpdfd, dpdft, dpdfdt;
+  dpdf.InitWithShallowSlice(peos_table->table.data, 3, 9, 1);
+  dpdfd.InitWithShallowSlice(peos_table->table.data, 3, 10, 1);
+  dpdft.InitWithShallowSlice(peos_table->table.data, 3, 11, 1);
+  dpdfdt.InitWithShallowSlice(peos_table->table.data, 3, 12, 1);
+  for (int j=0; j<jmax; ++j) {
+    for (int i=0; i<imax; ++i) {
+      while (std::getline(file, line) && (line[0] == '#')) continue;
+      std::stringstream lstream(line);
+      lstream >> dpdf(i,j);
+      lstream >> dpdfd(i,j);
+      lstream >> dpdft(i,j);
+      lstream >> dpdfdt(i,j);
+    }
+  }
+
+  // read the electron chemical potential table
+  for (int j=0; j<jmax; ++j) {
+    for (int i=0; i<imax; ++i) {
+      while (std::getline(file, line) && (line[0] == '#')) continue;
+      //std::stringstream lstream(line);
+      //lstream >> ef(i,j);
+      //lstream >> efd(i,j);
+      //lstream >> eft(i,j);
+      //lstream >> efdt(i,j);
+    }
+  }
+
+  // read the number density table
+  AthenaArray<Real> xf, xfd, xft, xfdt;
+  xf.InitWithShallowSlice(peos_table->table.data, 3, 13, 1);
+  xfd.InitWithShallowSlice(peos_table->table.data, 3, 14, 1);
+  xft.InitWithShallowSlice(peos_table->table.data, 3, 15, 1);
+  xfdt.InitWithShallowSlice(peos_table->table.data, 3, 16, 1);
+  for (int j=0; j<jmax; ++j) {
+    for (int i=0; i<imax; ++i) {
+      while (std::getline(file, line) && (line[0] == '#')) continue;
+      std::stringstream lstream(line);
+      lstream >> xf(i,j);
+      lstream >> xfd(i,j);
+      lstream >> xft(i,j);
+      lstream >> xfdt(i,j);
+    }
+  }
+
+  // close the file
+  file.close();
+}
+
 // ctor
 EosTable::EosTable(ParameterInput *pin) :
     table(), logRhoMin(), logRhoMax(),
@@ -154,11 +275,13 @@ EosTable::EosTable(ParameterInput *pin) :
     ReadHDF5Table(eos_fn, this, pin);
   } else if (eos_file_type.compare("ascii") == 0) { // ASCII/text table
     ReadAsciiTable(eos_fn, this, pin);
+  } else if (eos_file_type.compare("helm") == 0) { // helmholtz table
+    ReadHelmTable(eos_fn, this, pin);
   } else {
     std::stringstream msg;
     msg << "### FATAL ERROR in EosTable::EosTable" << std::endl
         << "EOS table of type '" << eos_file_type << "' not recognized."  << std::endl
-        << "Options are 'ascii', 'binary', and 'hdf5'." << std::endl;
+        << "Options are 'ascii', 'binary', 'hdf5', and 'helm'." << std::endl;
     ATHENA_ERROR(msg);
   }
 }
