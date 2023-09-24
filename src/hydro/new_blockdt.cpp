@@ -100,6 +100,9 @@ void Hydro::NewBlockTimeStep() {
               cf = pmb->peos->FastMagnetosonicSpeed(wi,bx);
               dt3(i) /= (std::abs(wi[IVZ]) + cf);
             } else {
+              if (GENERAL_EOS) {
+                for (int n=0; n<NSCALARS; ++n) {wi[NWAVE+n] = r(n,k,j,i);}
+              }
               Real cs = pmb->peos->SoundSpeed(wi);
               dt1(i) /= (std::abs(wi[IVX]) + cs);
               dt2(i) /= (std::abs(wi[IVY]) + cs);
