@@ -62,6 +62,13 @@ Real EquationOfState::AsqFromRhoP(Real rho, Real pres) {
 }
 
 //----------------------------------------------------------------------------------------
+//! \fn Real EquationOfState::TgasFromRhoEg(Real rho, Real egas)
+//! \brief Return interpolated gas pressure
+Real EquationOfState::TgasFromRhoEg(Real rho, Real egas) {
+  return GetEosData(ptable, 3, egas, rho) * egas;
+}
+
+//----------------------------------------------------------------------------------------
 //! void EquationOfState::InitEosConstants(ParameterInput* pin)
 //! \brief Initialize constants for EOS
 void EquationOfState::InitEosConstants(ParameterInput* pin) {

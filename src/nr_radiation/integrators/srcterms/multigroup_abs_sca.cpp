@@ -57,7 +57,12 @@ Real RadIntegrator::MultiGroupAbsScat(
   Real redfactor=pmy_rad->reduced_c/pmy_rad->crat;
   const int& nang=pmy_rad->nang;
   const int& nfreq=pmy_rad->nfreq;
-  Real gamma = pmy_rad->pmy_block->peos->GetGamma();
+  Real gamma;
+  if (GENERAL_EOS) {
+    gamma = std::numeric_limits<Real>::quiet_NaN();
+  } else {
+    gamma = pmy_rad->pmy_block->peos->GetGamma();
+  }
 
   // Temporary array
   AthenaArray<Real> &vncsigma2 = vncsigma2_;
@@ -106,8 +111,14 @@ Real RadIntegrator::MultiGroupAbsScat(
     suma3[ifr] = suma1[ifr] * (rdtcsigmas + rdtcsigmar - rdtcsigmae);
     suma1[ifr] *= (rdtcsigmap);
 
+    Real dTde;
+    if (GENERAL_EOS) {
+      dTde = pmy_rad->pmy_block->peos->dTdeFromRhoTgas(rho, tgas);
+    } else {
+      dTde = (gamma-1.0) / rho;
+    }
     coef[0] += - dtcsigmae * prat * suma2[ifr]
-               * (gamma - 1.0)/(rho*(1.0-suma3[ifr]));
+               * dTde / (1.0-suma3[ifr]);
   }
   coef[0] += -tgas;
 
@@ -130,8 +141,14 @@ Real RadIntegrator::MultiGroupAbsScat(
       // Real rdtcsigmap = redfactor * dtcsigmap;
 
       // No need to do this if already in thermal equilibrium
+      Real dTde;
+      if (GENERAL_EOS) {
+        dTde = pmy_rad->pmy_block->peos->dTdeFromRhoTgas(rho, tgas);
+      } else {
+        dTde = (gamma-1.0) / rho;
+      }
       coef[1] += prat * (dtcsigmap - dtcsigmae * suma1[ifr]/(1.0-suma3[ifr]))
-                 * pmy_rad->emission_spec(ifr) * (gamma - 1.0)/rho;
+                 * pmy_rad->emission_spec(ifr) * dTde;
     }
 
     // The polynomial is

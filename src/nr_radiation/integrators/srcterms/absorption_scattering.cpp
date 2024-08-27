@@ -56,7 +56,12 @@ Real RadIntegrator::AbsorptionScattering(
   Real redfactor=pmy_rad->reduced_c/pmy_rad->crat;
   const int& nang=pmy_rad->nang;
   const int& nfreq=pmy_rad->nfreq;
-  Real gamma = pmy_rad->pmy_block->peos->GetGamma();
+  Real gamma;
+  if (GENERAL_EOS) {
+    gamma = std::numeric_limits<Real>::quiet_NaN();
+  } else {
+    gamma = pmy_rad->pmy_block->peos->GetGamma();
+  }
 
   // Temporary array
   //AthenaArray<Real> &vncsigma = vncsigma_;
@@ -105,11 +110,16 @@ Real RadIntegrator::AbsorptionScattering(
     // Now solve the equation
     // rho dT/gamma-1=-\gamma Prat c(sigma T^4 - sigma(a1 T^4 + a2)/(1-a3))
 
-
     // No need to do this if already in thermal equilibrium
+    Real dTde;
+    if (GENERAL_EOS) {
+      dTde = pmy_rad->pmy_block->peos->dTdeFromRhoTgas(rho, tgas);
+    } else {
+      dTde = (gamma-1.0) / rho;
+    }
     coef[1] = prat * (dtcsigmap - dtcsigmae * suma1/(1.0-suma3))
-              * (gamma - 1.0)/rho;
-    coef[0] = -tgas - dtcsigmae * prat * suma2 * (gamma - 1.0)/(rho*(1.0-suma3));
+              * dTde;
+    coef[0] = -tgas - dtcsigmae * prat * suma2 * dTde/(1.0-suma3);
 
     if (std::abs(coef[1]) > TINY_NUMBER) {
       int flag = FouthPolyRoot(coef[1], coef[0], tgasnew);

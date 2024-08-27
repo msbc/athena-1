@@ -522,7 +522,12 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u) {
   Real invcrat = 1.0/prad->crat;
   Field *pfield = pmb->pfield;
 
-  Real gm1 = pmb->peos->GetGamma() - 1.0;
+  Real gm1;
+  if (GENERAL_EOS) {
+    gm1 = std::numeric_limits<Real>::quiet_NaN();
+  } else {
+    gm1 = pmb->peos->GetGamma() - 1.0;
+  }
 
   int is = pmb->is; int js = pmb->js; int ks = pmb->ks;
   int ie = pmb->ie; int je = pmb->je; int ke = pmb->ke;
@@ -563,12 +568,25 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u) {
           Real e_source = rad_source(0,k,j,i);
           // first check that gas internal energy will not become negative
           Real eint = u(IEN,k,j,i) + e_source - ekin - pb;
-          Real tgas = eint * gm1/u(IDN,k,j,i);
+          Real tgas;
+          if (GENERAL_EOS) {
+            tgas = pmb->peos->TgasFromRhoEg(u(IDN,k,j,i), eint);
+          } else {
+            tgas = eint * gm1/u(IDN,k,j,i);
+          }
           if (eint < 0.0) {
-            eint = tgas_new_(k,j,i) * u(IDN,k,j,i)/gm1;
+            if (GENERAL_EOS) {
+              eint = pmb->peos->EgasFromRhoT(u(IDN,k,j,i), prad->t_floor_(k,j,i));
+            } else {
+              eint = prad->t_floor_(k,j,i) * u(IDN,k,j,i)/gm1;
+            }
             u(IEN,k,j,i) = eint + pb + ekin;
           } else if (tgas > prad->t_ceiling_(k,j,i)) {
-            eint = prad->t_ceiling_(k,j,i) * u(IDN,k,j,i)/gm1;
+            if (GENERAL_EOS) {
+              eint = pmb->peos->EgasFromRhoT(u(IDN,k,j,i), prad->t_ceiling_(k,j,i));
+            } else {
+              eint = prad->t_ceiling_(k,j,i) * u(IDN,k,j,i)/gm1;
+            }
             u(IEN,k,j,i) = ekin + pb + eint;
           } else {
             u(IEN,k,j,i) += e_source;

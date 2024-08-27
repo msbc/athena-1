@@ -383,7 +383,12 @@ RadIntegrator::RadIntegrator(NRRadiation *prad, ParameterInput *pin) {
 void RadIntegrator::GetTgasVel(MeshBlock *pmb, const Real dt,
                                AthenaArray<Real> &u, AthenaArray<Real> &w,
                                AthenaArray<Real> &bcc, AthenaArray<Real> &ir) {
-  Real gm1 = pmb->peos->GetGamma() - 1.0;
+  Real gm1;
+  if (GENERAL_EOS) {
+    gm1 = std::numeric_limits<Real>::quiet_NaN();
+  } else {
+    gm1 = pmb->peos->GetGamma() - 1.0;
+  }
 
   Real rho_floor = pmb->peos->GetDensityFloor();
 
@@ -415,8 +420,12 @@ void RadIntegrator::GetTgasVel(MeshBlock *pmb, const Real dt,
                     +SQR(bcc(IB3,k,j,i)));
 
         Real vsq = vx * vx + vy * vy + vz * vz;
-        Real tgas = u(IEN,k,j,i) - pb - 0.5*rho*vsq;
-        tgas = gm1*tgas/rho;
+        Real tgas = u(IEN,k,j,i) - pb - 0.5*rho*vsq;  // total gas energy
+        if (GENERAL_EOS) {
+          tgas = pmb->peos->TgasFromRhoEg(rho, tgas);
+        } else {
+          tgas = gm1*tgas/rho;
+        }
         tgas = std::max(tgas,pmb->pnrrad->t_floor_(k,j,i));
         tgas = std::min(tgas,pmb->pnrrad->t_ceiling_(k,j,i));
         tgas_(k,j,i) = tgas;

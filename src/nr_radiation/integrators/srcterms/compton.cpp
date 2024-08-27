@@ -51,7 +51,12 @@ void RadIntegrator::Compton(AthenaArray<Real> &wmu_cm,
 
   const int& nang=pmy_rad->nang;
   const int& nfreq=pmy_rad->nfreq;
-  Real gamma = pmy_rad->pmy_block->peos->GetGamma();
+  Real gamma;
+  if (GENERAL_EOS) {
+    gamma = std::numeric_limits<Real>::quiet_NaN();
+  } else {
+    gamma = pmy_rad->pmy_block->peos->GetGamma();
+  }
   Real telectron = 1.0/pmy_rad->telectron;
 
   // Polynomial coefficients for Compton
@@ -76,7 +81,13 @@ void RadIntegrator::Compton(AthenaArray<Real> &wmu_cm,
          jr_cm += irn[n] * wmun[n];
          suma1 += tcoef[n] * wmun[n] * 4.0 * rdtcsigma * telectron;
       }
-      suma2 = 4.0 * lorz * prat * dtcsigma*(gamma-1.0)*telectron/rho;
+      Real dTde;
+      if (GENERAL_EOS) {
+        dTde = pmy_rad->pmy_block->peos->dTdeFromRhoTgas(rho, tgas);
+      } else {
+        dTde = (gamma-1.0) / rho;
+      }
+      suma2 = 4.0 * lorz * prat * dtcsigma*dTde*telectron;
 
       Real tr = std::sqrt(std::sqrt(jr_cm));
       Real trnew;
@@ -120,7 +131,12 @@ void RadIntegrator::MultiGroupCompton(
 
   const int& nang=pmy_rad->nang;
   const int& nfreq=pmy_rad->nfreq;
-  Real gamma = pmy_rad->pmy_block->peos->GetGamma();
+  Real gamma;
+  if (GENERAL_EOS) {
+    gamma = std::numeric_limits<Real>::quiet_NaN();
+  } else {
+    gamma = pmy_rad->pmy_block->peos->GetGamma();
+  }
   Real one_telectron = 1.0/pmy_rad->telectron;
   //correction factor for high order terms of energy change per scattering
   // f_theta is 1 when kT/m_ec^2 -->0
@@ -136,7 +152,13 @@ void RadIntegrator::MultiGroupCompton(
   Real compt_coef = f_theta*lorz*ct*redfactor*rho*pmy_rad->kappa_es
                     *one_telectron;
   Real coef_a1=4*compt_coef;
-  Real coef_a2=(gamma -1.0)*prat*coef_a1/(redfactor*rho);
+  Real dTde;
+  if (GENERAL_EOS) {
+    dTde = pmy_rad->pmy_block->peos->dTdeFromRhoTgas(rho, tgas);
+  } else {
+    dTde = (gamma-1.0) / rho;
+  }
+  Real coef_a2=dTde*prat*coef_a1/redfactor;
 
   // now calculate integral of J
   Real *j_nu = &(sum_nu1_(0));
@@ -213,7 +235,7 @@ void RadIntegrator::MultiGroupCompton(
       count++;
     }
 
-     tgas_new = tgas + ((gamma-1.0)*prat/(redfactor*rho)) * sum_jnu *
+    tgas_new = tgas + (dTde*prat/redfactor) * sum_jnu *
                  (1.0 - r_four_sol * r_four_sol * r_four_sol * r_four_sol);
   }
   //--------------------------------------------------------------------
@@ -413,7 +435,7 @@ void RadIntegrator::MultiGroupCompton(
 
     // now update tgas_new via energy conservation
     Real tgas_test = (prat/redfactor)*(sum_jnu-sum_new_jnu)
-                     *((gamma-1.0)/rho) + tgas_ini;
+                     *dTde + tgas_ini;
     if (tgas_test < TINY_NUMBER)
       tgas_test = tgas_new;
     tgas = tgas_test;

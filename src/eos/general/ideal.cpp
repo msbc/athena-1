@@ -10,9 +10,13 @@
 // C headers
 
 // C++ headers
+#include <sstream>
 
 // Athena++ headers
 #include "../eos.hpp"
+namespace {
+  Real tnorm = 1.0;
+}
 
 //----------------------------------------------------------------------------------------
 //! \fn Real EquationOfState::PresFromRhoEg(Real rho, Real egas)
@@ -39,5 +43,27 @@ Real EquationOfState::AsqFromRhoP(Real rho, Real pres) {
 //! \fn void EquationOfState::InitEosConstants(ParameterInput* pin)
 //! \brief Initialize constants for EOS
 void EquationOfState::InitEosConstants(ParameterInput *pin) {
+  if (NR_RADIATION_ENABLED | IM_RADIATION_ENABLED) {
+    if (pin->DoesParameterExist("radiation", "prat")) {
+      tnorm = std::pow(1.0 + pin->GetReal("radiation", "prat"), -0.25);
+    } else if (pin->DoesParameterExist("radiation", "T_unit")) {
+      tnorm = 1.0 / pin->GetReal("radiation", "T_unit");
+    } else {
+      std::stringstream msg;
+      msg << "### FATAL ERROR in EquationOfState::InitEosConstants" << std::endl
+          << "No radiation Prat or T_unit found in input file." << std::endl;
+      ATHENA_ERROR(msg);
+    }
+  }
   return;
+}
+
+Real EquationOfState::TgasFromRhoEg(Real rho, Real egas) {
+  return (gamma_ - 1.) * egas / rho;
+}
+Real EquationOfState::EgasFromRhoT(Real rho, Real temp) {
+  return temp * rho / (gamma_ - 1.);
+}
+Real EquationOfState::dTdeFromRhoTgas(Real rho, Real temp) {
+  return (gamma_ - 1.) / rho;
 }

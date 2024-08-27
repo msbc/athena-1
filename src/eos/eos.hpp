@@ -143,6 +143,9 @@ class EquationOfState {
 #endif  // #else (#if !RELATIVISTIC_DYNAMICS, #elif !GENERAL_RELATIVITY)
 
   Real PresFromRhoEg(Real rho, Real egas);
+  Real TgasFromRhoEg(Real rho, Real egas);
+  Real EgasFromRhoT(Real rho, Real temp);
+  Real dTdeFromRhoTgas(Real rho, Real temp);
   Real EgasFromRhoP(Real rho, Real pres);
   Real AsqFromRhoP(Real rho, Real pres);
   Real GetIsoSoundSpeed() const {return iso_sound_speed_;}
