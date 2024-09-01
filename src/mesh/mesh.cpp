@@ -520,6 +520,9 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
     bnderef = new int[Globals::nranks];
     brdisp = new int[Globals::nranks];
     bddisp = new int[Globals::nranks];
+    int nlevel = pin->GetOrAddInteger("mesh", "numlevel", 1);
+    locmap_ = new std::unordered_map<LogicalLocation, int,
+                                     LogicalLocationHash>[nlevel - 1];
   }
 
   // initialize cost array with the simplest estimate; all the blocks are equal
@@ -861,6 +864,9 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
     bnderef = new int[Globals::nranks];
     brdisp = new int[Globals::nranks];
     bddisp = new int[Globals::nranks];
+    int nlevel = pin->GetOrAddInteger("mesh", "numlevel", 1);
+    locmap_ = new std::unordered_map<LogicalLocation, int,
+                                     LogicalLocationHash>[nlevel - 1];
   }
 
   CalculateLoadBalance(costlist, ranklist, nslist, nblist, nbtotal);
@@ -975,6 +981,7 @@ Mesh::~Mesh() {
     delete [] bnderef;
     delete [] brdisp;
     delete [] bddisp;
+    delete [] locmap_;
   }
   // delete user Mesh data
   if (nreal_user_mesh_data_>0) delete [] ruser_mesh_data;
