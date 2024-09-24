@@ -49,6 +49,7 @@
 #include "../eos/eos.hpp"
 #include "../field/field.hpp"
 #include "../hydro/hydro.hpp"
+#include "../inputs/hdf5_reader.hpp"
 #include "../mesh/mesh.hpp"
 #include "../nr_radiation/integrators/rad_integrators.hpp"
 #include "../nr_radiation/radiation.hpp"
@@ -58,6 +59,10 @@
 
 #ifdef MPI_PARALLEL
 #include <mpi.h>
+#endif
+
+#ifndef HDF5OUTPUT
+#error "HDF5OUTPUT must be enabled for this problem generator."
 #endif
 
 // TODO(felker): many unused arguments in these functions: time, iout, ...
@@ -83,6 +88,7 @@ void RadTop(MeshBlock *pmb, Coordinates *pco, NRRadiation *prad,
             AthenaArray<Real> &ir,
             Real time, Real dt,
             int is, int ie, int js, int je, int ks, int ke, int ngh);
+void StarOpacity(MeshBlock *pmb, AthenaArray<Real> &prim);
 namespace {
 Real HistoryBxBy(MeshBlock *pmb, int iout);
 Real HistorydVxVy(MeshBlock *pmb, int iout);
@@ -92,6 +98,7 @@ Real dfloor, pfloor;
 Real Omega_0, qshear;
 int ic_rows;  // number of rows in the initial condition file
 AthenaArray<Real> empty; // empty array for unused arguments
+InterpTable2D opacity_table;
 } // namespace
 
 //====================================================================================
@@ -186,7 +193,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   }
 
   // Prepare arrays to initial conditions
-  AllocateRealUserMeshDataField(3);
+  AllocateRealUserMeshDataField(5);
   // star profile
   ruser_mesh_data[0].NewAthenaArray(ic_rows);
   ruser_mesh_data[1].NewAthenaArray(ic_rows);
@@ -230,10 +237,60 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   if (Globals::my_rank == 0) {
     std::cout << "Loaded " << ic_rows << " rows of initial conditions from " << fn << std::endl;
   }
+
+  if (!pin->DoesParameterExist("radiation", "opacity_file")) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in strat_rad.cpp ProblemGenerator" << std::endl
+        << "Opacity file not specified (radiation/opacity_file)." << std::endl;
+    ATHENA_ERROR(msg);
+  }
+  std::string opacity_file = pin->GetString("radiation", "opacity_file");
+  std::string dataset = pin->GetOrAddString("radiation", "opacity_dataset", "kappa");
+
+
+  AthenaArray<Real>& opacity{ruser_mesh_data[3]};
+  AthenaArray<Real>& lims{ruser_mesh_data[4]};
+  lims.NewAthenaArray(4);
+  if (Globals::my_rank == 0) {
+    HDF5ToRealArray(opacity_file.c_str(), opacity, dataset.c_str());
+    if (opacity.GetDim1() > 10000 || opacity.GetDim1() < 0 || opacity.GetDim2() > 10000 || opacity.GetDim2() < 0) {
+      std::stringstream msg;
+      msg << "### FATAL ERROR in strat_rad.cpp ProblemGenerator" << std::endl
+          << "Opacity data has unexpected shape: " << opacity.GetDim2() << ", " << opacity.GetDim1() << std::endl;
+      ATHENA_ERROR(msg);
+    }
+    AthenaArray<Real> rho;
+    HDF5ToRealArray(opacity_file.c_str(), rho, "rho");
+    AthenaArray<Real> pres;
+    HDF5ToRealArray(opacity_file.c_str(), pres, "pres");
+    if (rho.GetDim1() != opacity.GetDim2() || pres.GetDim1() != opacity.GetDim1()) {
+      std::stringstream msg;
+      msg << "### FATAL ERROR in strat_rad.cpp ProblemGenerator" << std::endl
+          << "Opacity shape inconsistent with rho/pres shape." << std::endl
+          << "Rho: " << rho.GetDim1() << ", Pres: " << pres.GetDim1() << std::endl
+          << "Opacity: " << opacity.GetDim2() << ", " << opacity.GetDim1() << std::endl;
+      ATHENA_ERROR(msg);
+    }
+
+    lims(0) = std::log10(rho(0));
+    lims(1) = std::log10(rho(rho.GetDim1()-1));
+    lims(2) = std::log10(pres(0));
+    lims(3) = std::log10(pres(pres.GetDim1()-1));
+  }
+  BroadcastRealArray(opacity);
+  BroadcastRealArray(lims);
+
+  // Initialize the opacity table
+  opacity_table.InitDataWithShallowSlice(opacity);
+  opacity_table.SetX2lim(lims(0), lims(1));
+  opacity_table.SetX1lim(lims(2), lims(3));
+
   return;
 }
 
-
+void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
+  pnrrad->EnrollOpacityFunction(StarOpacity);
+}
 
 //======================================================================================
 //! \fn void MeshBlock::ProblemGenerator(ParameterInput *pin)
@@ -795,6 +852,25 @@ void StratOutflowOuterX3(MeshBlock *pmb, Coordinates *pco,
     }
   }
   return;
+}
+
+void StarOpacity(MeshBlock *pmb, AthenaArray<Real> &prim) {
+  int is = pmb->is, ie = pmb->ie, js = pmb->js, je = pmb->je, ks = pmb->ks, ke = pmb->ke;
+  for (int k=ks; k<=ke; k++) {
+    for (int j=js; j<=je; j++) {
+      for (int i=is; i<=ie; i++) {
+        for (int freq=0; freq<pmb->pnrrad->nfreq; freq++) {
+          Real lrho = std::log10(prim(IDN,k,j,i));
+          Real lpres = std::log10(prim(IPR,k,j,i));
+          Real kappa = opacity_table.interpolate(0, lrho, lpres);
+          pmb->pnrrad->sigma_s(k,j,i,freq) = kappa * .5;
+          pmb->pnrrad->sigma_a(k,j,i,freq) = kappa * .5;
+          pmb->pnrrad->sigma_pe(k,j,i,freq) = kappa;
+          pmb->pnrrad->sigma_p(k,j,i,freq) = kappa;
+        }
+      }
+    }
+  }
 }
 
 namespace {
