@@ -23,6 +23,7 @@ class InterpTable2D {
   InterpTable2D(const int nvar, const int nx2, const int nx1);
 
   void SetSize(const int nvar, const int nx2, const int nx1);
+  void InitDataWithShallowSlice(AthenaArray<Real> &in_data);
   Real interpolate(int nvar, Real x2, Real x1);
   int nvar();
   AthenaArray<Real> data;

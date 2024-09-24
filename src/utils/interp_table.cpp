@@ -32,6 +32,14 @@ void InterpTable2D::SetSize(const int nvar, const int nx2, const int nx1) {
   data.NewAthenaArray(nvar, nx2, nx1);
 }
 
+//! Set data and size of table
+void InterpTable2D::InitDataWithShallowSlice(AthenaArray<Real> &in_data) {
+  nvar_ = in_data.GetDim3(); // number of variables/tables
+  nx2_  = in_data.GetDim2(); // slower indexing dimension
+  nx1_  = in_data.GetDim1(); // faster indexing dimension
+  data.InitWithShallowSlice(in_data, 3, 0, 1);
+}
+
 //! Set the corrdinate limits for x1
 void InterpTable2D::SetX1lim(Real x1min, Real x1max) {
   x1min_ = x1min;

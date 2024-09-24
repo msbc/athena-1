@@ -211,4 +211,121 @@ void HDF5TableLoader(const char *filename, InterpTable2D* ptable, const int nvar
   }
   return;
 }
+
+void HDF5ToRealArray(const char *filename, AthenaArray<Real> &array,
+                     const char *dataset_name, int ndim, bool collective) {
+  // Check if the file is a valid HDF5 file
+  htri_t is_hdf5 = H5Fis_hdf5(filename);
+  if (is_hdf5 == 0) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in HDF5ToRealArray" << std::endl
+        << "File '" << filename << "' was found but is not a valid HDF5 file." << std::endl;
+    ATHENA_ERROR(msg);
+  } else if (is_hdf5 < 0) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in HDF5ToRealArray" << std::endl
+        << "File '" << filename << "' is not a valid HDF5 file and may not exist." << std::endl;
+    ATHENA_ERROR(msg);
+  }
+
+  // setup file/data handles
+  hid_t dataset, dspace;
+  hid_t property_list_file = H5Pcreate(H5P_FILE_ACCESS);
+#ifdef MPI_PARALLEL
+  {
+    if (collective) {
+      H5Pset_fapl_mpio(property_list_file, MPI_COMM_WORLD, MPI_INFO_NULL);
+    }
+  }
+#endif
+  hid_t file = H5Fopen(filename, H5F_ACC_RDONLY, property_list_file);
+  H5Pclose(property_list_file);
+  if (file < 0) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR\nCould not open " << filename << std::endl;
+    ATHENA_ERROR(msg);
+  }
+  hid_t property_list_transfer = H5Pcreate(H5P_DATASET_XFER);
+#ifdef MPI_PARALLEL
+  {
+    if (collective) {
+      H5Pset_dxpl_mpio(property_list_transfer, H5FD_MPIO_COLLECTIVE);
+    }
+  }
+#endif
+
+  // open dataset
+  dataset = H5Dopen(file, dataset_name, H5P_DEFAULT);
+  if (dataset < 0) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in HDF5ToRealArray" << std::endl
+        << "Could not open dataset '" << dataset_name << "' in file '" << filename << "'." << std::endl;
+    ATHENA_ERROR(msg);
+  }
+  dspace = H5Dget_space(dataset);
+
+  // Get and check file/dataset
+  int ndims = H5Sget_simple_extent_ndims(dspace);
+  if (ndim >= 0 && ndims != ndim) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in HDF5ToRealArray" << std::endl
+        << "Rank of data field '" << dataset_name << "' in file '" << filename
+        << "' must be " << ndim << ". Rank is " << ndims << "." << std::endl;
+    ATHENA_ERROR(msg);
+  }
+  if (ndims > MAX_RANK_ARRAY) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in HDF5ToRealArray" << std::endl
+        << "Rank of data field '" << dataset_name << "' in file '" << filename
+        << "' must be less than " << MAX_RANK_ARRAY
+        << " (limited by AthenaArray). Rank is " << ndims << "." << std::endl;
+    ATHENA_ERROR(msg);
+  }
+
+  // Get dimensions/shape
+  hsize_t dims[ndims];
+  hsize_t count_file[ndims];
+  H5Sget_simple_extent_dims(dspace, dims, NULL);
+  for (int i = 0; i < ndims; ++i) {
+    count_file[i] = dims[i];
+  }
+
+  // Prepare to read dataset
+  hsize_t start_file[ndims];
+  for (int i = 0; i < ndims; ++i) {
+    start_file[i] = 0;
+  }
+  hsize_t start_mem[MAX_RANK_ARRAY];
+  hsize_t count_mem[MAX_RANK_ARRAY];
+  int dims_mem[MAX_RANK_ARRAY];
+  for (int i = 0; i < MAX_RANK_ARRAY; ++i) {
+    start_mem[i] = 0;
+    int j = ndims - MAX_RANK_ARRAY + i;
+    if (j < 0) {
+      count_mem[i] = 1;
+      dims_mem[i] = 1;
+    } else {
+      count_mem[i] = count_file[j];
+      dims_mem[i] = static_cast<int>(count_file[j]);
+    }
+  }
+  H5Sselect_hyperslab(dspace, H5S_SELECT_SET, start_file, NULL, count_file, NULL);
+  hid_t mem_space = H5Screate_simple(MAX_RANK_ARRAY, count_mem, NULL);
+  H5Sselect_hyperslab(mem_space, H5S_SELECT_SET, start_mem, NULL, count_mem, NULL);
+
+  // Allocate memory
+  array.NewAthenaArray(dims_mem[5], dims_mem[4], dims_mem[3], dims_mem[2], dims_mem[1], dims_mem[0]);
+
+  // Read dataset
+  H5Dread(dataset, H5T_REAL, mem_space, dspace, property_list_transfer, array.data());
+
+  // close resources
+  H5Dclose(dataset);
+  H5Sclose(dspace);
+  H5Sclose(mem_space);
+  H5Pclose(property_list_transfer);
+  H5Fclose(file);
+  return;
+}
+
 #endif  // HDF5OUTPUT

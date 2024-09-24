@@ -43,6 +43,8 @@ void InvRotateVec(const Real sint, const Real cost,
                  const Real sinp, const Real cosp,
                  Real &v1, Real &v2, Real &v3);
 
+void BroadcastRealArray(AthenaArray<Real> &array, int root=0);
+
 
 //----------------------------------------------------------------------------------------
 //! \namespace SignalHandler

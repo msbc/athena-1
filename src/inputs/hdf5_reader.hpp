@@ -19,9 +19,9 @@
 #include "../utils/interp_table.hpp" // InterpTable2D
 
 // upper limit on the dimensionality of the resulting AthenaArray
-#define MAX_RANK_MEM 5
+#define MAX_RANK_MEM MAX_RANK_ARRAY
 // upper limit on the dimensionality of the external dataset
-#define MAX_RANK_FILE 5
+#define MAX_RANK_FILE MAX_RANK_ARRAY
 
 // Declarations
 void HDF5ReadRealArray(const char *filename, const char *dataset_name, int rank_file,
@@ -34,5 +34,8 @@ void HDF5TableLoader(const char *filename, InterpTable2D* ptable, const int nvar
                      const char **var_names,
                      const char *x2lim_name=NULL,
                      const char *x1lim_name=NULL);
+
+void HDF5ToRealArray(const char *filename, AthenaArray<Real> &array, const char *dataset_name,
+                     int ndim=-1, bool collective=false);
 
 #endif  // INPUTS_HDF5_READER_HPP_

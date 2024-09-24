@@ -22,6 +22,9 @@
 
 // Athena++ headers
 
+// upper limit on the dimensionality of AthenaArray
+#define MAX_RANK_ARRAY 6
+
 template <typename T>
 class AthenaArray {
  public:
