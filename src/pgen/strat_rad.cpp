@@ -99,6 +99,7 @@ Real Omega_0, qshear;
 int ic_rows;  // number of rows in the initial condition file
 AthenaArray<Real> empty; // empty array for unused arguments
 InterpTable2D opacity_table;
+Real opacity_norm;
 } // namespace
 
 //====================================================================================
@@ -246,6 +247,8 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   }
   std::string opacity_file = pin->GetString("radiation", "opacity_file");
   std::string dataset = pin->GetOrAddString("radiation", "opacity_dataset", "kappa");
+  opacity_norm = pin->GetOrAddReal("radiation", "opacity_cm_over_simlength", 1);
+
 
 
   AthenaArray<Real>& opacity{ruser_mesh_data[3]};
@@ -862,7 +865,7 @@ void StarOpacity(MeshBlock *pmb, AthenaArray<Real> &prim) {
         for (int freq=0; freq<pmb->pnrrad->nfreq; freq++) {
           Real lrho = std::log10(prim(IDN,k,j,i));
           Real lpres = std::log10(prim(IPR,k,j,i));
-          Real kappa = opacity_table.interpolate(0, lrho, lpres);
+          Real kappa = opacity_table.interpolate(0, lrho, lpres) * opacity_norm;
           pmb->pnrrad->sigma_s(k,j,i,freq) = kappa * .5;
           pmb->pnrrad->sigma_a(k,j,i,freq) = kappa * .5;
           pmb->pnrrad->sigma_pe(k,j,i,freq) = kappa;
