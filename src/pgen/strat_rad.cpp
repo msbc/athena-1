@@ -65,6 +65,8 @@
 #error "HDF5OUTPUT must be enabled for this problem generator."
 #endif
 
+#define MSBC_DEBUG 1
+
 // TODO(felker): many unused arguments in these functions: time, iout, ...
 void VertGrav(MeshBlock *pmb, const Real time, const Real dt,
               const AthenaArray<Real> &prim, const AthenaArray<Real> &prim_scalar,
@@ -89,17 +91,47 @@ void RadTop(MeshBlock *pmb, Coordinates *pco, NRRadiation *prad,
             Real time, Real dt,
             int is, int ie, int js, int je, int ks, int ke, int ngh);
 void StarOpacity(MeshBlock *pmb, AthenaArray<Real> &prim);
-namespace {
-Real HistoryBxBy(MeshBlock *pmb, int iout);
-Real HistorydVxVy(MeshBlock *pmb, int iout);
 
-// Apply a density floor - useful for large |z| regions
-Real dfloor, pfloor;
-Real Omega_0, qshear;
-int ic_rows;  // number of rows in the initial condition file
-AthenaArray<Real> empty; // empty array for unused arguments
-InterpTable2D opacity_table;
-Real opacity_norm;
+class OpalOpacityTable {
+ public:
+  OpalOpacityTable() {}
+  OpalOpacityTable(const char *filename) { LoadOpacity(filename); }
+  ~OpalOpacityTable() {
+    log_rhoT.DeleteAthenaArray();
+    log_T.DeleteAthenaArray();
+    log_kappa.DeleteAthenaArray();
+  }
+
+  void LoadOpacity(const char *filename);
+  Real GetOpacity(const Real rho, const Real tgas);
+  void SetUnits(const Real rhounit, const Real tunit) {
+    OpalOpacityTable::rhounit = rhounit;
+    OpalOpacityTable::tunit = tunit;
+  }
+
+ private:
+  AthenaArray<Real> log_rhoT, log_T, log_kappa;
+  std::vector<int> breaks;
+  std::vector<Real> break_vals;
+  Real rhot_norm, rhot_min, rhot_max;
+  Real tunit{1.0};
+  Real rhounit{1.0};
+};
+
+namespace {
+  OpalOpacityTable kR, kP;
+  Real rhounit, tunit, lunit;
+
+  Real HistoryBxBy(MeshBlock *pmb, int iout);
+  Real HistorydVxVy(MeshBlock *pmb, int iout);
+
+  // Apply a density floor - useful for large |z| regions
+  Real dfloor, pfloor;
+  Real Omega_0, qshear;
+  int ic_rows;  // number of rows in the initial condition file
+  AthenaArray<Real> empty; // empty array for unused arguments
+  InterpTable2D opacity_table;
+  Real opacity_norm;
 } // namespace
 
 //====================================================================================
@@ -110,6 +142,11 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
         << "This problem generator requires magnetic fields." << std::endl;
     ATHENA_ERROR(msg);
   }
+
+  // get units
+  tunit = pin->GetOrAddReal("radiation","T_unit",1.e7);
+  rhounit = pin->GetOrAddReal("radiation","density_unit",1.0);
+  lunit = pin->GetOrAddReal("radiation","length_unit",1.0);
 
   // shearing sheet parameter
   qshear = pin->GetReal("orbital_advection","qshear");
@@ -239,54 +276,21 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     std::cout << "Loaded " << ic_rows << " rows of initial conditions from " << fn << std::endl;
   }
 
-  if (!pin->DoesParameterExist("radiation", "opacity_file")) {
-    std::stringstream msg;
-    msg << "### FATAL ERROR in strat_rad.cpp ProblemGenerator" << std::endl
-        << "Opacity file not specified (radiation/opacity_file)." << std::endl;
-    ATHENA_ERROR(msg);
-  }
-  std::string opacity_file = pin->GetString("radiation", "opacity_file");
-  std::string dataset = pin->GetOrAddString("radiation", "opacity_dataset", "kappa");
-  opacity_norm = pin->GetOrAddReal("radiation", "opacity_cm_over_simlength", 1);
+  //opacity_norm = pin->GetOrAddReal("radiation", "opacity_cm_over_simlength", 1);
+  //AthenaArray<Real>& opacity{ruser_mesh_data[3]};
+  //AthenaArray<Real>& lims{ruser_mesh_data[4]};
+  //LoadOpacity(pin, lims, opacity);
+//
+  //// Initialize the opacity table
+  //opacity_table.InitDataWithShallowSlice(opacity);
+  //opacity_table.SetX2lim(lims(0), lims(1));
+  //opacity_table.SetX1lim(lims(2), lims(3));
 
-
-
-  AthenaArray<Real>& opacity{ruser_mesh_data[3]};
-  AthenaArray<Real>& lims{ruser_mesh_data[4]};
-  lims.NewAthenaArray(4);
-  if (Globals::my_rank == 0) {
-    HDF5ToRealArray(opacity_file.c_str(), opacity, dataset.c_str());
-    if (opacity.GetDim1() > 10000 || opacity.GetDim1() < 0 || opacity.GetDim2() > 10000 || opacity.GetDim2() < 0) {
-      std::stringstream msg;
-      msg << "### FATAL ERROR in strat_rad.cpp ProblemGenerator" << std::endl
-          << "Opacity data has unexpected shape: " << opacity.GetDim2() << ", " << opacity.GetDim1() << std::endl;
-      ATHENA_ERROR(msg);
-    }
-    AthenaArray<Real> rho;
-    HDF5ToRealArray(opacity_file.c_str(), rho, "rho");
-    AthenaArray<Real> pres;
-    HDF5ToRealArray(opacity_file.c_str(), pres, "pres");
-    if (rho.GetDim1() != opacity.GetDim2() || pres.GetDim1() != opacity.GetDim1()) {
-      std::stringstream msg;
-      msg << "### FATAL ERROR in strat_rad.cpp ProblemGenerator" << std::endl
-          << "Opacity shape inconsistent with rho/pres shape." << std::endl
-          << "Rho: " << rho.GetDim1() << ", Pres: " << pres.GetDim1() << std::endl
-          << "Opacity: " << opacity.GetDim2() << ", " << opacity.GetDim1() << std::endl;
-      ATHENA_ERROR(msg);
-    }
-
-    lims(0) = std::log10(rho(0));
-    lims(1) = std::log10(rho(rho.GetDim1()-1));
-    lims(2) = std::log10(pres(0));
-    lims(3) = std::log10(pres(pres.GetDim1()-1));
-  }
-  BroadcastRealArray(opacity);
-  BroadcastRealArray(lims);
-
-  // Initialize the opacity table
-  opacity_table.InitDataWithShallowSlice(opacity);
-  opacity_table.SetX2lim(lims(0), lims(1));
-  opacity_table.SetX1lim(lims(2), lims(3));
+  // Initialize the Opal opacity tables
+  std::string kR_fn = pin->GetOrAddString("radiation", "kR_file", "kR.h5");
+  kR.LoadOpacity(kR_fn.c_str());
+  std::string kP_fn = pin->GetOrAddString("radiation", "kP_file", "kP.h5");
+  kP.LoadOpacity(kP_fn.c_str());
 
   return;
 }
@@ -608,7 +612,17 @@ void MeshBlock::UserWorkInLoop() {
   return;
 }
 
+//======================================================================================
+//! \fn void Mesh::TerminateUserMeshProperties(void)
+//  \brief Clean up the Mesh properties
+//======================================================================================
 void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
+  // free memory
+  if(NR_RADIATION_ENABLED || IM_RADIATION_ENABLED){
+    kR.~OpalOpacityTable();
+    kR.~OpalOpacityTable();
+  }
+
   return;
 }
 
@@ -857,25 +871,227 @@ void StratOutflowOuterX3(MeshBlock *pmb, Coordinates *pco,
   return;
 }
 
+
+void LoadOpacity(ParameterInput *pin, AthenaArray<Real> &lims, AthenaArray<Real> &opacity) {
+  if (!pin->DoesParameterExist("radiation", "opacity_file")) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in strat_rad.cpp ProblemGenerator" << std::endl
+        << "Opacity file not specified (radiation/opacity_file)." << std::endl;
+    ATHENA_ERROR(msg);
+  }
+  std::string opacity_file = pin->GetString("radiation", "opacity_file");
+  std::string dataset = pin->GetOrAddString("radiation", "opacity_dataset", "kappa");
+
+  if (Globals::my_rank == 0) {
+    lims.NewAthenaArray(4);
+    HDF5ToRealArray(opacity_file.c_str(), opacity, dataset.c_str());
+    if (opacity.GetDim1() > 10000 || opacity.GetDim1() < 0 || opacity.GetDim2() > 10000 || opacity.GetDim2() < 0) {
+      std::stringstream msg;
+      msg << "### FATAL ERROR in strat_rad.cpp ProblemGenerator" << std::endl
+          << "Opacity data has unexpected shape: " << opacity.GetDim2() << ", " << opacity.GetDim1() << std::endl;
+      ATHENA_ERROR(msg);
+    }
+    AthenaArray<Real> rho;
+    HDF5ToRealArray(opacity_file.c_str(), rho, "rho");
+    AthenaArray<Real> pres;
+    HDF5ToRealArray(opacity_file.c_str(), pres, "pres");
+    if (rho.GetDim1() != opacity.GetDim2() || pres.GetDim1() != opacity.GetDim1()) {
+      std::stringstream msg;
+      msg << "### FATAL ERROR in strat_rad.cpp ProblemGenerator" << std::endl
+          << "Opacity shape inconsistent with rho/pres shape." << std::endl
+          << "Rho: " << rho.GetDim1() << ", Pres: " << pres.GetDim1() << std::endl
+          << "Opacity: " << opacity.GetDim2() << ", " << opacity.GetDim1() << std::endl;
+      ATHENA_ERROR(msg);
+    }
+
+    lims(0) = std::log10(rho(0));
+    lims(1) = std::log10(rho(rho.GetDim1()-1));
+    lims(2) = std::log10(pres(0));
+    lims(3) = std::log10(pres(pres.GetDim1()-1));
+  }
+  BroadcastRealArray(opacity);
+  BroadcastRealArray(lims);
+  return;
+}
+
+void OpalOpacityTable::LoadOpacity(const char *opacity_file) {
+  if (Globals::my_rank == 0) {
+    HDF5ToRealArray(opacity_file, log_kappa, "log_kappa");
+    if (log_kappa.GetDim1() > 10000 || log_kappa.GetDim1() < 0 ||
+        log_kappa.GetDim2() > 10000 || log_kappa.GetDim2() < 0) {
+      std::stringstream msg;
+      msg << "### FATAL ERROR in strat_rad.cpp ProblemGenerator" << std::endl
+          << "Opacity data has unexpected shape: "
+          << log_kappa.GetDim2() << ", " << log_kappa.GetDim1() << std::endl;
+      ATHENA_ERROR(msg);
+    }
+    HDF5ToRealArray(opacity_file, log_T, "log_T");
+    HDF5ToRealArray(opacity_file, log_rhoT, "log_rhoT");
+    if (log_T.GetDim1() != log_kappa.GetDim2() ||
+        log_rhoT.GetDim1() != log_kappa.GetDim1()) {
+      std::stringstream msg;
+      msg << "### FATAL ERROR in strat_rad.cpp ProblemGenerator" << std::endl
+          << "Opacity shape inconsistent with rho/pres shape." << std::endl
+          << "Rho: " << log_T.GetDim1() << ", Pres: " << log_rhoT.GetDim1() << std::endl
+          << "Opacity: " << log_kappa.GetDim2() << ", " << log_kappa.GetDim1()
+          << std::endl;
+      ATHENA_ERROR(msg);
+    }
+  }
+  BroadcastRealArray(log_kappa);
+  BroadcastRealArray(log_T);
+  BroadcastRealArray(log_rhoT);
+
+  Real last_diff = -1.0;
+  for (int i = 0; i < log_T.GetDim1() - 1; ++i) {
+    Real diff = log_T(i+1) - log_T(i);
+    if (std::abs(last_diff / diff - 1.0) > 1e-6) {
+      breaks.push_back(i);
+      break_vals.push_back(log_T(i));
+    }
+  }
+  breaks.push_back(log_T.GetDim1() - 1);
+  break_vals.push_back(log_T(log_T.GetDim1() - 1));
+
+  rhot_min = log_rhoT(0);
+  rhot_max = log_rhoT(log_rhoT.GetDim1() - 1);
+  rhot_norm = (log_rhoT.GetDim1() - 1) / (rhot_max - rhot_min);
+}
+
+Real OpalOpacityTable::GetOpacity(const Real rho, const Real tgas) {
+  Real logt = log10(tgas * tunit);
+  Real logrhot = log10(rho * rhounit) - 3.0* logt + 18.0;
+
+  int nt1 = 0;
+  int nt2 = 0;
+  int i;
+  for (i = 0; static_cast<unsigned long>(i) < breaks.size(); ++i) {
+    if (logt < break_vals[i]) {
+      nt2 = breaks[i];
+      break;
+    }
+    nt1 = breaks[i];
+  }
+
+  if (static_cast<unsigned long>(i) == breaks.size() + 1 || i == 0) {
+    nt2 = nt1;
+  } else {
+    Real t1 = break_vals[i-1];
+    Real t2 = break_vals[i];
+    Real frac = (logt - t1) / (t2 - t1);
+    nt2 = nt1 + std::ceil(frac * (breaks[i] - nt1));
+    nt1 = nt2 - 1;
+  }
+
+  if (MSBC_DEBUG) {
+    if (nt1 < 0 || nt1 >= log_T.GetDim1() || nt2 < 0 || nt2 >= log_T.GetDim1()) {
+      std::stringstream msg;
+      msg << "### FATAL ERROR in strat_rad.cpp OpalOpacityTable::GetOpacity" << std::endl
+          << "Temperature index out of bounds: " << nt1 << ", " << nt2 << std::endl;
+      ATHENA_ERROR(msg);
+    }
+    if ((logt < log_T(nt1) || logt > log_T(nt2)) && (nt1 != nt2)) {
+      std::stringstream msg;
+      msg << "### FATAL ERROR in strat_rad.cpp OpalOpacityTable::GetOpacity" << std::endl
+          << "Temperature not bracketed: " << logt << ", " << log_T(nt1) << ", " << log_T(nt2) << std::endl;
+      ATHENA_ERROR(msg);
+    }
+  }
+
+  int nrhot2 = std::ceil(rhot_norm * (logrhot - rhot_min));
+  int nrhot1 = nrhot2 - 1;
+  if (nrhot1 < 0) nrhot1 = 0;
+  if (nrhot2 < 0) nrhot2 = 0;
+  if (nrhot1 >= log_rhoT.GetDim1()) nrhot1 = log_rhoT.GetDim1() - 1;
+  if (nrhot2 >= log_rhoT.GetDim1()) nrhot2 = log_rhoT.GetDim1() - 1;
+
+  if (MSBC_DEBUG) {
+    if (nrhot1 < 0 || nrhot1 >= log_rhoT.GetDim1() || nrhot2 < 0 || nrhot2 >= log_rhoT.GetDim1()) {
+      std::stringstream msg;
+      msg << "### FATAL ERROR in strat_rad.cpp OpalOpacityTable::GetOpacity" << std::endl
+          << "RhoT index out of bounds: " << nrhot1 << ", " << nrhot2 << std::endl;
+      ATHENA_ERROR(msg);
+    }
+    if ((logrhot < log_rhoT(nrhot1) || logrhot > log_rhoT(nrhot2)) && (nrhot1 != nrhot2)) {
+      std::stringstream msg;
+      msg << "### FATAL ERROR in strat_rad.cpp OpalOpacityTable::GetOpacity" << std::endl
+          << "RhoT not bracketed: " << logrhot << ", " << log_rhoT(nrhot1) << ", " << log_rhoT(nrhot2) << std::endl;
+      ATHENA_ERROR(msg);
+    }
+  }
+
+  Real kappa_t1_rho1 = log_kappa(nt1,nrhot1);
+  Real kappa_t1_rho2 = log_kappa(nt1,nrhot2);
+  Real kappa_t2_rho1 = log_kappa(nt2,nrhot1);
+  Real kappa_t2_rho2 = log_kappa(nt2,nrhot2);
+
+  Real rho_1 = log_rhoT(nrhot1);
+  Real rho_2 = log_rhoT(nrhot2);
+  Real t_1 = log_T(nt1);
+  Real t_2 = log_T(nt2);
+
+  Real kappa;
+
+  if (nrhot1 == nrhot2) {
+    if(nt1 == nt2) {
+      kappa = kappa_t1_rho1;
+    } else {
+      kappa = kappa_t1_rho1 + (kappa_t2_rho1 - kappa_t1_rho1) *
+                              (logt - t_1)/(t_2 - t_1);
+    }/* end same T*/
+  } else {
+    if (nt1 == nt2) {
+      kappa = kappa_t1_rho1 + (kappa_t1_rho2 - kappa_t1_rho1) *
+                              (logrhot - rho_1)/(rho_2 - rho_1);
+    } else {
+      kappa = kappa_t1_rho1 * (t_2 - logt) * (rho_2 - logrhot)/
+                              ((t_2 - t_1) * (rho_2 - rho_1))
+            + kappa_t2_rho1 * (logt - t_1) * (rho_2 - logrhot)/
+                              ((t_2 - t_1) * (rho_2 - rho_1))
+            + kappa_t1_rho2 * (t_2 - logt) * (logrhot - rho_1)/
+                              ((t_2 - t_1) * (rho_2 - rho_1))
+            + kappa_t2_rho2 * (logt - t_1) * (logrhot - rho_1)/
+                              ((t_2 - t_1) * (rho_2 - rho_1));
+    }
+  }/* end same rhoT */
+
+  return std::pow(10.0, kappa);
+}
+
 void StarOpacity(MeshBlock *pmb, AthenaArray<Real> &prim) {
+  // electron scattering opacity
+  Real kappas = 0.2 * (1.0 + 0.7);
+  Real kappaa = 0.0;
+
   int is = pmb->is, ie = pmb->ie, js = pmb->js, je = pmb->je, ks = pmb->ks, ke = pmb->ke;
   for (int k=ks; k<=ke; k++) {
     for (int j=js; j<=je; j++) {
       for (int i=is; i<=ie; i++) {
         for (int freq=0; freq<pmb->pnrrad->nfreq; freq++) {
-          Real lrho = std::log10(prim(IDN,k,j,i));
-          Real lpres = std::log10(prim(IPR,k,j,i));
-          Real kappa = opacity_table.interpolate(0, lrho, lpres) * opacity_norm;
-          pmb->pnrrad->sigma_s(k,j,i,freq) = kappa * .5;
-          pmb->pnrrad->sigma_a(k,j,i,freq) = kappa * .5;
-          pmb->pnrrad->sigma_pe(k,j,i,freq) = kappa;
-          pmb->pnrrad->sigma_p(k,j,i,freq) = kappa;
+          Real rho = prim(IDN,k,j,i);
+          Real gast = pmb->peos->TgasFromRhoP(rho, prim(IPR,k,j,i));
+          Real kappa = kR.GetOpacity(rho, gast);
+          Real kappa_planck = kP.GetOpacity(rho, gast);
+          if(kappa < kappas) {
+            if(gast < 0.14){
+              kappaa = kappa;
+              kappa = 0.0;
+            } else {
+              kappaa = 0.0;
+            }
+          } else {
+            kappaa = kappa - kappas;
+            kappa = kappas;
+          }
+          pmb->pnrrad->sigma_s(k,j,i,freq) = kappa * rho * rhounit * lunit;
+          pmb->pnrrad->sigma_a(k,j,i,freq) = kappaa * rho * rhounit * lunit;
+          pmb->pnrrad->sigma_pe(k,j,i,freq) = kappa_planck * rho * rhounit * lunit;
+          pmb->pnrrad->sigma_p(k,j,i,freq) = pmb->pnrrad->sigma_pe(k,j,i,freq);
         }
       }
     }
   }
 }
-
 namespace {
 
 Real HistoryBxBy(MeshBlock *pmb, int iout) {

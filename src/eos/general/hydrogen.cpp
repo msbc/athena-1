@@ -39,6 +39,13 @@ Real x_(Real rho, Real T) {
 }
 
 //----------------------------------------------------------------------------------------
+//! \fn Real dxdT_(Real x, Real T) {
+//! \brief compute derivative of ionization fraction with respect to temperature
+Real dxdT_(Real x, Real T) {
+  return -0.5*((-2 + 3*T)*(-1 + x)*x)/(SQR(T)*(-2 + x));
+}
+
+//----------------------------------------------------------------------------------------
 //! \fn Real P_of_rho_T(Real rho, Real T) {
 //! \brief compute gas pressure
 Real P_of_rho_T(Real rho, Real T) {
@@ -60,6 +67,16 @@ Real asq_(Real rho, Real T) {
   Real x = x_(rho, T);
   Real c = 2 * SQR(T) * (2. + x - SQR(x));
   return (1.+x)*T*(1+(2*c + 2*T*(4 + 3*T)*(1 - x)*x)/(3*c + SQR(2 + 3*T)*(1 - x)*x));
+}
+
+//----------------------------------------------------------------------------------------
+//! \fn Real dedT_(Real rho, Real T) {
+//! \brief compute derivative of internal energy density with respect to temperature
+Real dedT_(Real rho, Real T) {
+  Real x = x_(rho, T);
+  Real x2 = SQR(x);
+  Real T2 = SQR(T);
+  return (rho*(-4*T2 + (-2 + T + T2)*x - (-2 + T + T2)*x2))/(2.*SQR(T)*(-2 + x));
 }
 
 //----------------------------------------------------------------------------------------
@@ -145,6 +162,29 @@ Real EquationOfState::PresFromRhoEg(Real rho, Real egas) {
 }
 
 //----------------------------------------------------------------------------------------
+//! \fn Real EquationOfState::TgasFromRhoEg(Real rho, Real egas)
+//! \brief Return gas temperature
+Real EquationOfState::TgasFromRhoEg(Real rho, Real egas){
+  rho *= rho_unit_;
+  egas *= egas_unit_;
+  Real es = egas / rho;
+  Real T = invert(*e_of_rho_T, rho, egas, std::max(es - 1.0, 0.1*es)/3.0,
+                  float_1pe*2.0*es/3.0);
+  return T;
+}
+
+//----------------------------------------------------------------------------------------
+//! \fn Real EquationOfState::TgasFromRhoP(Real rho, Real pres)
+//! \brief Return gas temperature
+Real EquationOfState::TgasFromRhoP(Real rho, Real pres){
+  rho *= rho_unit_;
+  pres *= egas_unit_;
+  Real ps = pres / rho;
+  Real T = invert(*P_of_rho_T, rho, pres, 0.5*ps, float_1pe*ps);
+  return T;
+}
+
+//----------------------------------------------------------------------------------------
 //! \fn Real EquationOfState::EgasFromRhoP(Real rho, Real pres)
 //! \brief Return internal energy density
 Real EquationOfState::EgasFromRhoP(Real rho, Real pres) {
@@ -153,6 +193,15 @@ Real EquationOfState::EgasFromRhoP(Real rho, Real pres) {
   Real ps = pres / rho;
   Real T = invert(*P_of_rho_T, rho, pres, 0.5*ps, float_1pe*ps);
   return e_of_rho_T(rho, T) * inv_egas_unit_;
+}
+
+//----------------------------------------------------------------------------------------
+//! \fn Real EquationOfState::dTdeFromRhoTgas(Real rho, Real temp)
+//! \brief Return derivative of internal energy density with respect to temperature
+Real EquationOfState::dTdeFromRhoTgas(Real rho, Real temp) {
+  rho *= rho_unit_;
+  Real T = temp;
+  return 1.0 / (dedT_(rho, T) * inv_egas_unit_);
 }
 
 //----------------------------------------------------------------------------------------

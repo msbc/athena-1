@@ -55,6 +55,15 @@ Real EquationOfState::TgasFromRhoEg(Real rho, Real egas) {
   ATHENA_ERROR(msg);
   return -1.0;
 }
+
+Real EquationOfState::TgasFromRhoP(Real rho, Real pres) {
+  std::stringstream msg;
+  msg << "### FATAL ERROR in EquationOfState::TgasFromRhoEg" << std::endl
+      << "Function should not be called with current configuration." << std::endl;
+  ATHENA_ERROR(msg);
+  return -1.0;
+}
+
 Real EquationOfState::EgasFromRhoT(Real rho, Real temp) {
   std::stringstream msg;
   msg << "### FATAL ERROR in EquationOfState::EgasFromRhoT" << std::endl

@@ -24,7 +24,7 @@
 // Declarations
 class Hydro;
 class ParameterInput;
-struct FaceField;
+struct FaceField ;
 
 //! \class EquationOfState
 //! \brief data and functions that implement EoS
@@ -144,6 +144,7 @@ class EquationOfState {
 
   Real PresFromRhoEg(Real rho, Real egas);
   Real TgasFromRhoEg(Real rho, Real egas);
+  Real TgasFromRhoP(Real rho, Real pres);
   Real EgasFromRhoT(Real rho, Real temp);
   Real dTdeFromRhoTgas(Real rho, Real temp);
   Real EgasFromRhoP(Real rho, Real pres);

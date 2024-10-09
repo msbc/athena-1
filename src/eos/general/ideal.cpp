@@ -61,6 +61,9 @@ void EquationOfState::InitEosConstants(ParameterInput *pin) {
 Real EquationOfState::TgasFromRhoEg(Real rho, Real egas) {
   return (gamma_ - 1.) * egas / rho;
 }
+Real EquationOfState::TgasFromRhoP(Real rho, Real pres) {
+  return pres / rho;
+}
 Real EquationOfState::EgasFromRhoT(Real rho, Real temp) {
   return temp * rho / (gamma_ - 1.);
 }
