@@ -126,7 +126,7 @@ namespace {
   Real HistorydVxVy(MeshBlock *pmb, int iout);
 
   // Apply a density floor - useful for large |z| regions
-  Real dfloor, pfloor;
+  Real dfloor, pfloor, tfloor;
   Real Omega_0, qshear;
   int ic_rows;  // number of rows in the initial condition file
   AthenaArray<Real> empty; // empty array for unused arguments
@@ -147,6 +147,12 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   tunit = pin->GetOrAddReal("radiation","T_unit",1.e7);
   rhounit = pin->GetOrAddReal("radiation","density_unit",1.0);
   lunit = pin->GetOrAddReal("radiation","length_unit",1.0);
+
+  // get floors
+  Real float_min = std::numeric_limits<float>::min();
+  dfloor=pin->GetOrAddReal("hydro","dfloor",(1024*(float_min)));
+  pfloor=pin->GetOrAddReal("hydro","pfloor",(1024*(float_min)));
+  tfloor = pin->GetOrAddReal("radiation", "tfloor", 1e-4);
 
   // shearing sheet parameter
   qshear = pin->GetReal("orbital_advection","qshear");
@@ -356,10 +362,6 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   // Read problem parameters for initial conditions
   amp = pin->GetReal("problem","amp");
   ipert = pin->GetOrAddInteger("problem","ipert", 1);
-
-  Real float_min = std::numeric_limits<float>::min();
-  dfloor=pin->GetOrAddReal("hydro","dfloor",(1024*(float_min)));
-  pfloor=pin->GetOrAddReal("hydro","pfloor",(1024*(float_min)));
 
   if (MAGNETIC_FIELDS_ENABLED) {
     ifield = pin->GetOrAddInteger("problem","ifield", 1);
@@ -959,8 +961,8 @@ void OpalOpacityTable::LoadOpacity(const char *opacity_file) {
 }
 
 Real OpalOpacityTable::GetOpacity(const Real rho, const Real tgas) {
-  Real logt = log10(tgas * tunit);
-  Real logrhot = log10(rho * rhounit) - 3.0* logt + 18.0;
+  Real logt = log10(std::max(tgas, tfloor) * tunit);
+  Real logrhot = log10(std::max(rho, dfloor) * rhounit) - 3.0* logt + 18.0;
 
   int nt1 = 0;
   int nt2 = 0;
