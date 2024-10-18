@@ -742,24 +742,22 @@ void RadTop(MeshBlock *pmb, Coordinates *pco, NRRadiation *prad,
             AthenaArray<Real> &ir,
             Real time, Real dt,
             int is, int ie, int js, int je, int ks, int ke, int ngh) {
-  int nang=prad->nang;
-  int noct=prad->noct;
-  int nfreq=prad->nfreq;
-  int ang_oct=nang/noct;
-
+  //vacuum boundary condition at top
   for (int k=1; k<=ngh; ++k) {
     for (int j=js; j<=je; ++j) {
       for (int i=is; i<=ie; ++i) {
-        for (int ifr=0; ifr<nfreq; ++ifr) {
-          for (int l=0; l<noct; ++l) {
-            for (int n=0; n<ang_oct; ++n) {
-              int ang=ifr*nang+n;
-              if(prad->mu(2,ks-k,j,i,n)<0){
-                ir(ks-k,j,i,ang)=0;
-              } else {
-                ir(ke+k,j,i,ang) = ir(ke,j,i,ang);
-              }
+
+        for(int ifr=0; ifr<prad->nfreq; ++ifr){
+          for(int n=0; n<prad->nang; ++n){
+            Real miuz = prad->mu(2,ke+k,j,i,n);
+            if(miuz > 0.0){
+              ir(ke+k,j,i,ifr*prad->nang+n)
+                            = ir(ke+k-1,j,i,ifr*prad->nang+n);
+            }else{
+              ir(ke+k,j,i,ifr*prad->nang+n) = 0.0;
             }
+
+
           }
         }
       }
@@ -773,24 +771,22 @@ void RadBot(MeshBlock *pmb, Coordinates *pco, NRRadiation *prad,
             AthenaArray<Real> &ir,
             Real time, Real dt,
             int is, int ie, int js, int je, int ks, int ke, int ngh) {
-  int nang=prad->nang;
-  int noct=prad->noct;
-  int nfreq=prad->nfreq;
-  int ang_oct=nang/noct;
-
+  //vacuum boundary condition at bottom
   for (int k=1; k<=ngh; ++k) {
     for (int j=js; j<=je; ++j) {
       for (int i=is; i<=ie; ++i) {
-        for (int ifr=0; ifr<nfreq; ++ifr) {
-          for (int l=0; l<noct; ++l) {
-            for (int n=0; n<ang_oct; ++n) {
-              int ang=ifr*nang+n;
-              if(prad->mu(2,ks-k,j,i,n)>0){
-                ir(ks-k,j,i,ang)=0;
-              } else {
-                ir(ke+k,j,i,ang) = ir(ke,j,i,ang);
-              }
+
+        for(int ifr=0; ifr<prad->nfreq; ++ifr){
+          for(int n=0; n<prad->nang; ++n){
+            Real miuz = prad->mu(2,ks-k,j,i,n);
+            if(miuz < 0.0){
+              ir(ks-k,j,i,ifr*prad->nang+n)
+                            = ir(ks-k+1,j,i,ifr*prad->nang+n);
+            }else{
+              ir(ks-k,j,i,ifr*prad->nang+n) = 0.0;
             }
+
+
           }
         }
       }
