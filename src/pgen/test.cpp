@@ -296,20 +296,20 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           phydro->u(IM2,k,j,i) -= rd*qshear*Omega_0*x1;
         phydro->u(IM3,k,j,i) = rd*rvz;
         if (NON_BAROTROPIC_EOS) {
-          if (GENERAL_EOS) {
+#ifdef GENERAL_EOS
             Real egas = peos->EgasFromRhoP(rd, rp);
             Tgas = peos->TgasFromRhoEg(rd, egas);
             phydro->u(IEN,k,j,i) = egas
                                  + 0.5*(SQR(phydro->u(IM1,k,j,i))
                                         + SQR(phydro->u(IM2,k,j,i))
                                         + SQR(phydro->u(IM3,k,j,i)))/rd;
-          } else {
+#else
             Tgas = rp/rd;
             phydro->u(IEN,k,j,i) = rp/(gam-1.0)
                                   + 0.5*(SQR(phydro->u(IM1,k,j,i))
                                           + SQR(phydro->u(IM2,k,j,i))
                                           + SQR(phydro->u(IM3,k,j,i)))/rd;
-          }
+#endif
         } // Hydro
 
         // Initialize magnetic field.  For 3D shearing box B1=Bx, B2=By, B3=Bz
