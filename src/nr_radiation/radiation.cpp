@@ -135,6 +135,9 @@ NRRadiation::NRRadiation(MeshBlock *pmb, ParameterInput *pin):
 
   // number of cells for three dimensions
   int nc1 = pmb->ncells1, nc2 = pmb->ncells2, nc3 = pmb->ncells3;
+  if (Globals::my_rank == 0) {
+    std::cout << "Block shape: " << nc3 << " " << nc2 << " " << nc1 << std::endl;
+  }
   // calculate noct based on dimension
   int ndim = 1;
   if (nc2 > 1) ndim = 2;
@@ -270,7 +273,8 @@ NRRadiation::NRRadiation(MeshBlock *pmb, ParameterInput *pin):
 
   output_sigma.NewAthenaArray(3*nfreq,nc3,nc2,nc1);
 
-  mu.NewAthenaArray(3,nc3,nc2,nc1,nang);
+  const int& xgh = rad_bvar.pbval_->xgh_;
+  mu.NewAthenaArray(3,nc3,nc2+2*xgh+1,nc1,nang);
   wmu.NewAthenaArray(nang);
 
   if (angle_flag == 1) {

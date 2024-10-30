@@ -153,9 +153,14 @@
 #define ONE_PI_FOUR_POWER 0.010265982254684
 
 #ifdef ENABLE_EXCEPTIONS
-#define ATHENA_ERROR(x) throw std::runtime_error(x.str().c_str())
+#define ATHENA_ERROR(x) \
+  x << "\nFile: " << __FILE__ << ", line: " \
+    << __LINE__ << std::endl; \
+  throw std::runtime_error(x.str().c_str())
 #else
-#define ATHENA_ERROR(x) std::cout << x.str(); std::exit(EXIT_FAILURE)
+#define ATHENA_ERROR(x) \
+  std::cout << x.str() << "\nFile: " << __FILE__ \
+            << ", line: " << __LINE__ << std::endl; std::exit(EXIT_FAILURE)
 #endif
 
 #endif // DEFS_HPP_

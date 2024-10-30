@@ -147,6 +147,8 @@ class RadBoundaryVariable : public CellCenteredBoundaryVariable {
                                            Real *buf, const int nb);
 
   AthenaArray<Real> ir_cm_, ir_lab_, pflux_; // co-moving frame specific inteisites
+
+  friend class NRRadiation;
 };
 
 #endif //  BVALS_CC_NR_RADIATION_BVALS_RAD_HPP_

@@ -233,8 +233,10 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 
   // Compute field strength based on beta.
   if (MAGNETIC_FIELDS_ENABLED) {
-    B0 = std::sqrt(static_cast<Real>(2.0*pres/beta));
-    std::cout << "B0=" << B0 << std::endl;
+    if (Globals::my_rank == 0 && lid == 0) {
+      B0 = std::sqrt(static_cast<Real>(2.0*pres/beta));
+      std::cout << "B0=" << B0 << std::endl;
+    }
   }
 
   Real sigma0 = pin->GetOrAddReal("problem","sigma0",1e2);
@@ -296,7 +298,8 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           phydro->u(IM2,k,j,i) -= rd*qshear*Omega_0*x1;
         phydro->u(IM3,k,j,i) = rd*rvz;
         if (NON_BAROTROPIC_EOS) {
-#ifdef GENERAL_EOS
+#if (GENERAL_EOS)
+            std::cout << "In pgen, calling eos->TgasFromRhoP" << std::endl;
             Real egas = peos->EgasFromRhoP(rd, rp);
             Tgas = peos->TgasFromRhoEg(rd, egas);
             phydro->u(IEN,k,j,i) = egas

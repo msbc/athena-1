@@ -120,6 +120,23 @@ void RadBoundaryVariable::ShearQuantities(AthenaArray<Real> &shear_cc_, bool upp
     ku += NGHOST;
   }
 
+  //AthenaArray<Real> &mu = prad->mu;
+//
+  //const int& nang=prad->nang;
+  //if (mu.GetDim5() != 3 || mu.GetDim5() != pmesh->block_size.nx3 + 2*NGHOST ||
+  //    mu.GetDim3() != pmesh->block_size.nx2 + 2*NGHOST+2*xgh+1 ||
+  //    mu.GetDim2() != pmesh->block_size.nx1 + 2*NGHOST || mu.GetDim1() != nang) {
+  //  std::stringstream msg;
+  //  msg << "### FATAL ERROR in RadBoundaryVariable::ShearQuantities" << std::endl
+  //      << "Dimensions of mu do not match the block size" << std::endl
+  //      << "mu: " << mu.GetDim5() << " " << mu.GetDim4() << " " << mu.GetDim3() << " "
+  //      << mu.GetDim2() << " " << mu.GetDim1() << std::endl
+  //      << "Expected: " << 3 << " " << pmesh->block_size.nx3 + 2*NGHOST << " "
+  //      << pmesh->block_size.nx2 + 2*NGHOST+2*xgh+1 << " " << pmesh->block_size.nx1 + 2*NGHOST
+  //      << " " << nang << std::endl;
+  //  ATHENA_ERROR(msg);
+  //}
+
   Real qomL = pbval_->qomL_;
   int sign[2]{1, -1};
   int ib[2]{pmb->is - NGHOST, pmb->ie + 1};

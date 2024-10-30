@@ -247,5 +247,6 @@ class BoundaryValues : public BoundaryBase, //public BoundaryPhysics,
   friend class SixRayBoundaryVariable;
   friend class HydroBoundaryVariable;  // needed for shearing box quantities
   friend class RadBoundaryVariable; // needed for radiation boundary condition
+  friend class NRRadiation; // needed for radiation boundary condition
 };
 #endif // BVALS_BVALS_HPP_
