@@ -283,15 +283,15 @@ void HDF5ToRealArray(const char *filename, AthenaArray<Real> &array,
   }
 
   // Get dimensions/shape
-  hsize_t dims[ndims];
-  hsize_t count_file[ndims];
+  hsize_t dims[MAX_RANK_MEM];
+  hsize_t count_file[MAX_RANK_MEM];
   H5Sget_simple_extent_dims(dspace, dims, NULL);
   for (int i = 0; i < ndims; ++i) {
     count_file[i] = dims[i];
   }
 
   // Prepare to read dataset
-  hsize_t start_file[ndims];
+  hsize_t start_file[MAX_RANK_MEM];
   for (int i = 0; i < ndims; ++i) {
     start_file[i] = 0;
   }
