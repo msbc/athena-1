@@ -299,14 +299,16 @@ void HDF5ToRealArray(const char *filename, AthenaArray<Real> &array,
   hsize_t count_mem[MAX_RANK_ARRAY];
   int dims_mem[MAX_RANK_ARRAY];
   for (int i = 0; i < MAX_RANK_ARRAY; ++i) {
+      dims_mem[i] = 1;
+  }
+  for (int i = 0; i < MAX_RANK_ARRAY; ++i) {
     start_mem[i] = 0;
     int j = ndims - MAX_RANK_ARRAY + i;
     if (j < 0) {
       count_mem[i] = 1;
-      dims_mem[i] = 1;
     } else {
       count_mem[i] = count_file[j];
-      dims_mem[i] = static_cast<int>(count_file[j]);
+      dims_mem[ndims - j - 1] = static_cast<int>(count_file[j]);
     }
   }
   H5Sselect_hyperslab(dspace, H5S_SELECT_SET, start_file, NULL, count_file, NULL);
