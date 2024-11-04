@@ -135,9 +135,6 @@ NRRadiation::NRRadiation(MeshBlock *pmb, ParameterInput *pin):
 
   // number of cells for three dimensions
   int nc1 = pmb->ncells1, nc2 = pmb->ncells2, nc3 = pmb->ncells3;
-  if (Globals::my_rank == 0) {
-    std::cout << "Block shape: " << nc3 << " " << nc2 << " " << nc1 << std::endl;
-  }
   // calculate noct based on dimension
   int ndim = 1;
   if (nc2 > 1) ndim = 2;
