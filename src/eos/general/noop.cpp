@@ -7,6 +7,9 @@
 //! \brief Implements no-op versions of the general eos functions
 
 // C headers
+#include <execinfo.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 // C++ headers
 #include <cmath>   // sqrt()
@@ -18,6 +21,19 @@
 
 // Athena++ headers
 #include "../eos.hpp"
+
+void print_backtrace() {
+    void *buffer[10];
+    int nptrs = backtrace(buffer, 10);  // Get the backtrace
+    char **symbols = backtrace_symbols(buffer, nptrs);  // Get symbols for the stack frames
+
+    fprintf(stderr, "Backtrace:\n");
+    for (int i = 0; i < nptrs; i++) {
+        fprintf(stderr, "%s\n", symbols[i]);
+    }
+
+    free(symbols);  // Free the memory allocated by backtrace_symbols
+}
 
 Real EquationOfState::PresFromRhoEg(Real rho, Real egas) {
   std::stringstream msg;
@@ -49,6 +65,7 @@ void EquationOfState::InitEosConstants(ParameterInput *pin) {
 }
 
 Real EquationOfState::TgasFromRhoEg(Real rho, Real egas) {
+  print_backtrace();
   std::stringstream msg;
   msg << "### FATAL ERROR in EquationOfState::TgasFromRhoEg" << std::endl
       << "Function should not be called with current configuration." << std::endl;
@@ -58,7 +75,8 @@ Real EquationOfState::TgasFromRhoEg(Real rho, Real egas) {
 
 Real EquationOfState::TgasFromRhoP(Real rho, Real pres) {
   std::stringstream msg;
-  msg << "### FATAL ERROR in EquationOfState::TgasFromRhoEg" << std::endl
+  print_backtrace();
+  msg << "### FATAL ERROR in EquationOfState::TgasFromRhoP" << std::endl
       << "Function should not be called with current configuration." << std::endl;
   ATHENA_ERROR(msg);
   return -1.0;
