@@ -110,6 +110,7 @@ class OpalOpacityTable {
   }
 
  private:
+  std::string filename;
   AthenaArray<Real> log_rhoT, log_T, log_kappa;
   std::vector<int> breaks;
   std::vector<Real> break_vals;
@@ -295,8 +296,38 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   // Initialize the Opal opacity tables
   std::string kR_fn = pin->GetOrAddString("radiation", "kR_file", "kR.h5");
   kR.LoadOpacity(kR_fn.c_str());
+  kR.SetUnits(rhounit, tunit);
   std::string kP_fn = pin->GetOrAddString("radiation", "kP_file", "kP.h5");
   kP.LoadOpacity(kP_fn.c_str());
+  kP.SetUnits(rhounit, tunit);
+
+  if (Globals::nranks == 1 && MSBC_DEBUG) {
+    std::cout << "Loaded Opal opacity tables from " << kR_fn << " and " << kP_fn << std::endl;
+    std::cout << "rhounit, tunit: " << rhounit << ", " << tunit << std::endl;
+    Real rho=0.0, Tgas=0.0;
+
+    std::cout << "Input fluid parameters and retrieve opacities." << '\n'
+              << "Non-positive inputs will exit loop." << '\n';
+    std::cout << "Input density (mass/volume): ";
+    std::cin >> rho;
+    std::cout << "Input gas temperature: ";
+    std::cin >> Tgas;
+
+    while (rho > 0 && std::isfinite(rho) && Tgas >0 && std::isfinite(Tgas)) {
+      std::cout << "Density, gas Temperature: " << rho << ", " << Tgas << '\n';
+
+      Real kappa_r = kR.GetOpacity(rho, Tgas);
+      Real kappa_p = kP.GetOpacity(rho, Tgas);
+
+      std::cout << "Ros, Plank \n";
+      std::cout << kappa_r << ", " << kappa_p << '\n' << std::endl;
+      std::cout << "Input density (mass/volume): ";
+      std::cin >> rho;
+      std::cout << "Input gas temperature: ";
+      std::cin >> Tgas;
+    }
+    std::cout << std::endl;
+  }
 
   return;
 }
@@ -416,7 +447,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     }
     rho *= 0.5;
     p *= 0.5;
-    std::cout << "z=" << pcoord->x3v(k) << ", k=" << k << ", rho=" << rho << ", p=" << p << std::endl;
+    //std::cout << "z=" << pcoord->x3v(k) << ", k=" << k << ", rho=" << rho << ", p=" << p << std::endl;
 
     for (int j=js; j<=je; j++) {
       for (int i=is; i<=ie; i++) {
@@ -467,20 +498,20 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           phydro->u(IM2,k,j,i) -= rd*qshear*Omega_0*x1;
         phydro->u(IM3,k,j,i) = rd*rvz;
         if (NON_BAROTROPIC_EOS) {
-          if (GENERAL_EOS) {
+#if (GENERAL_EOS)
             Real egas = peos->EgasFromRhoP(rd, rp);
             Tgas = peos->TgasFromRhoEg(rd, egas);
             phydro->u(IEN,k,j,i) = egas
                                  + 0.5*(SQR(phydro->u(IM1,k,j,i))
                                         + SQR(phydro->u(IM2,k,j,i))
                                         + SQR(phydro->u(IM3,k,j,i)))/rd;
-          } else {
+#else
             Tgas = rp/rd;
             phydro->u(IEN,k,j,i) = rp/(gam-1.0)
                                   + 0.5*(SQR(phydro->u(IM1,k,j,i))
                                           + SQR(phydro->u(IM2,k,j,i))
                                           + SQR(phydro->u(IM3,k,j,i)))/rd;
-          }
+#endif
         } // Hydro
 
         // Initialize magnetic field.  For 3D shearing box B1=Bx, B2=By, B3=Bz
@@ -621,8 +652,8 @@ void MeshBlock::UserWorkInLoop() {
 void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
   // free memory
   if(NR_RADIATION_ENABLED || IM_RADIATION_ENABLED){
-    kR.~OpalOpacityTable();
-    kR.~OpalOpacityTable();
+    //kR.~OpalOpacityTable();
+    //kR.~OpalOpacityTable();
   }
 
   return;
@@ -913,6 +944,7 @@ void LoadOpacity(ParameterInput *pin, AthenaArray<Real> &lims, AthenaArray<Real>
 }
 
 void OpalOpacityTable::LoadOpacity(const char *opacity_file) {
+  filename = std::string(opacity_file);
   if (Globals::my_rank == 0) {
     HDF5ToRealArray(opacity_file, log_kappa, "log_kappa");
     if (log_kappa.GetDim1() > 10000 || log_kappa.GetDim1() < 0 ||
@@ -947,6 +979,7 @@ void OpalOpacityTable::LoadOpacity(const char *opacity_file) {
       breaks.push_back(i);
       break_vals.push_back(log_T(i));
     }
+    last_diff = diff;
   }
   breaks.push_back(log_T.GetDim1() - 1);
   break_vals.push_back(log_T(log_T.GetDim1() - 1));
@@ -954,6 +987,16 @@ void OpalOpacityTable::LoadOpacity(const char *opacity_file) {
   rhot_min = log_rhoT(0);
   rhot_max = log_rhoT(log_rhoT.GetDim1() - 1);
   rhot_norm = (log_rhoT.GetDim1() - 1) / (rhot_max - rhot_min);
+
+  if (MSBC_DEBUG && Globals::my_rank == 0) {
+    std::cout << "    Opacity table loaded: " << filename.c_str() << std::endl;
+    std::cout << "    Table shape: " << log_kappa.GetDim2() << ", " << log_kappa.GetDim1() << std::endl;
+    std::cout << "    log_T: " << log_T.GetDim1() << ", log_rhoT: " << log_rhoT.GetDim1() << std::endl;
+    std::cout << "    breaks: " << breaks.size() << std::endl;
+    for (int i = 0; static_cast<unsigned long>(i) < breaks.size(); ++i) {
+      std::cout << "    " << i << ": " << breaks[i] << ", " << break_vals[i] << std::endl;
+    }
+  }
 }
 
 Real OpalOpacityTable::GetOpacity(const Real rho, const Real tgas) {
@@ -970,6 +1013,11 @@ Real OpalOpacityTable::GetOpacity(const Real rho, const Real tgas) {
     }
     nt1 = breaks[i];
   }
+  if (MSBC_DEBUG && Globals::nranks == 1) {
+    std::cout << "    rho = " << rho << ", tgas = " << tgas << std::endl;
+    std::cout << "    logt = " << logt << ", logrhot = " << logrhot << std::endl;
+    std::cout << "    nt1 = " << nt1 << ", nt2 = " << nt2 << std::endl;
+  }
 
   if (static_cast<unsigned long>(i) == breaks.size() + 1 || i == 0) {
     nt2 = nt1;
@@ -978,6 +1026,15 @@ Real OpalOpacityTable::GetOpacity(const Real rho, const Real tgas) {
     Real t2 = break_vals[i];
     Real frac = (logt - t1) / (t2 - t1);
     nt2 = nt1 + std::ceil(frac * (breaks[i] - nt1));
+    if (MSBC_DEBUG) {
+      if (nt2 < 0 || nt2 >= log_T.GetDim1() || nt1 < 0 || nt1 >= log_T.GetDim1()) {
+        std::stringstream msg;
+        msg << "### FATAL ERROR in strat_rad.cpp OpalOpacityTable::GetOpacity" << std::endl
+            << "Temperature index out of bounds: " << nt1 << ", " << nt2 << std::endl
+            << "log T = " << logt << std::endl;
+        ATHENA_ERROR(msg);
+      }
+    }
     nt1 = nt2 - 1;
   }
 
@@ -985,7 +1042,8 @@ Real OpalOpacityTable::GetOpacity(const Real rho, const Real tgas) {
     if (nt1 < 0 || nt1 >= log_T.GetDim1() || nt2 < 0 || nt2 >= log_T.GetDim1()) {
       std::stringstream msg;
       msg << "### FATAL ERROR in strat_rad.cpp OpalOpacityTable::GetOpacity" << std::endl
-          << "Temperature index out of bounds: " << nt1 << ", " << nt2 << std::endl;
+          << "Temperature index out of bounds: " << nt1 << ", " << nt2 << std::endl
+          << "log T = " << logt << ", Log R = " << logrhot << std::endl;
       ATHENA_ERROR(msg);
     }
     if ((logt < log_T(nt1) || logt > log_T(nt2)) && (nt1 != nt2)) {
@@ -1067,7 +1125,12 @@ void StarOpacity(MeshBlock *pmb, AthenaArray<Real> &prim) {
       for (int i=is; i<=ie; i++) {
         for (int freq=0; freq<pmb->pnrrad->nfreq; freq++) {
           Real rho = prim(IDN,k,j,i);
-          Real gast = pmb->peos->TgasFromRhoP(rho, prim(IPR,k,j,i));
+          Real gast;
+          if (GENERAL_EOS) {
+            gast = pmb->peos->TgasFromRhoP(rho, prim(IPR,k,j,i));
+          } else {
+            gast = prim(IPR,k,j,i) / rho;
+          }
           Real kappa = kR.GetOpacity(rho, gast);
           Real kappa_planck = kP.GetOpacity(rho, gast);
           if(kappa < kappas) {
