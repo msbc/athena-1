@@ -187,6 +187,16 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     B0 = std::sqrt(static_cast<Real>(2.0*pres/beta));
     std::cout << "B0=" << B0 << std::endl;
   }
+  Real asqr0;
+  if (NON_BAROTROPIC_EOS) {
+    if (GENERAL_EOS) {
+      asqr0 = peos->AsqFromRhoP(den, pres);
+    } else {
+      asqr0 = gam * pres / den;
+    }
+  } else {
+    asqr0 = SQR(iso_cs);
+  }
 
   // With viscosity and/or resistivity, read eta_Ohm and nu_V
   // (to be filled in) ???
@@ -200,16 +210,24 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
         // x2f = pcoord->x2f(j);
         // x3f = pcoord->x3f(k);
 
+        Real rp;
         // Initialize perturbations
         // ipert = 1 - random perturbations to P/d and V
         // [default, used by HGB]
+        if (NON_BAROTROPIC_EOS && !GENERAL_EOS) {
+          Real factor = std::max(0.5 * (gam - 1) * SQR(x3 * Omega_0) / asqr0, 0.0);
+          rd = den * std::pow(factor, 1.0/(gam - 1));
+          rp = pres * std::pow(factor, gam/(gam - 1));
+        } else {
+          rd = den*std::exp(-x3*x3);
+        }
         if (ipert == 1) {
           rval = amp*(ran2(&iseed) - 0.5);
-          rd = den*std::exp(-x3*x3)*(1.0+2.0*rval);
+          rd *= (1.0+2.0*rval);
           if (rd < dfloor) rd = dfloor;
           SumRd += rd;
           if (NON_BAROTROPIC_EOS) {
-            rp = pres/den*rd;
+            rp *= (1.0+2.0*rval);
             if (rp < pfloor) rp = pfloor;
           }
           rval = amp*(ran2(&iseed) - 0.5);
@@ -225,7 +243,6 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           SumRvz += rd*rvz;
           // no perturbations
         } else {
-          rd = den*std::exp(-x3*x3);
           rvx = 0;
           rvy = 0;
           rvz = 0;
