@@ -250,6 +250,10 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 
         // Initialize d, M, and P.
         // for_the_future: if FARGO do not initialize the bg shear
+        rd = std::max(rd, dfloor);
+        if (NON_BAROTROPIC_EOS) {
+          rp = std::max(rp, pfloor);
+        }
         phydro->u(IDN,k,j,i) = rd;
         phydro->u(IM1,k,j,i) = rd*rvx;
         phydro->u(IM2,k,j,i) = rd*rvy;
