@@ -215,7 +215,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
         // ipert = 1 - random perturbations to P/d and V
         // [default, used by HGB]
         if (NON_BAROTROPIC_EOS && !GENERAL_EOS) {
-          Real factor = std::max(0.5 * (gam - 1) * SQR(x3 * Omega_0) / asqr0, 0.0);
+          Real factor = std::max(1 - 0.5 * (gam - 1) * SQR(x3 * Omega_0) / asqr0, 0.0);
           rd = den * std::pow(factor, 1.0/(gam - 1));
           rp = pres * std::pow(factor, gam/(gam - 1));
         } else {
