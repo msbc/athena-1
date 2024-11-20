@@ -429,6 +429,7 @@ void VertGrav(MeshBlock *pmb, const Real time, const Real dt,
         }
         xi = z0/x3;
         fsmooth = SQR( std::sqrt( SQR(xi+sign) + SQR(xi*lambda) ) + xi*sign );
+        fsmooth = 1.0;
         // multiply gravitational potential by smoothing function
         cons(IM3,k,j,i) -= dt*den*SQR(Omega_0)*x3*fsmooth;
         if (NON_BAROTROPIC_EOS) {
