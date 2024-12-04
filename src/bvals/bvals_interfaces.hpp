@@ -174,14 +174,14 @@ struct BoundaryData { // aggregate and POD (even when MPI_PARALLEL is defined)
 #endif
 };
 
-using ShearingBoundaryData = BoundaryData<4>;
-using ShearingFluxBoundaryData = BoundaryData<3>;
+using ShearingBoundaryData = BoundaryData<NHYDRO>;
+using ShearingFluxBoundaryData = BoundaryData<NFIELD>;
 
 //----------------------------------------------------------------------------------------
 //! \struct ShearNeighborData
 //! \brief structure storing shearing boundary information
 
-template <int n = 4>
+template <int n = NHYDRO>
 struct ShearNeighborData {
   static constexpr int kMaxNeighbor = n;
   SimpleNeighborBlock send_neighbor[kMaxNeighbor], recv_neighbor[kMaxNeighbor];
