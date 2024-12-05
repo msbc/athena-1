@@ -412,28 +412,16 @@ void VertGrav(MeshBlock *pmb, const Real time, const Real dt,
               const AthenaArray<Real> &prim, const AthenaArray<Real> &prim_scalar,
               const AthenaArray<Real> &bcc, AthenaArray<Real> &cons,
               AthenaArray<Real> &cons_scalar) {
-  Real fsmooth, xi, sign;
-  Real Lz = pmb->pmy_mesh->mesh_size.x3max - pmb->pmy_mesh->mesh_size.x3min;
-  Real z0 = Lz/2.0;
-  Real lambda = 0.1 / z0;
   for (int k=pmb->ks; k<=pmb->ke; ++k) {
     for (int j=pmb->js; j<=pmb->je; ++j) {
       for (int i=pmb->is; i<=pmb->ie; ++i) {
         Real den = prim(IDN,k,j,i);
         Real x3 = pmb->pcoord->x3v(k);
-        // smoothing function
-        if (x3 >= 0) {
-          sign = -1.0;
-        } else {
-          sign = 1.0;
-        }
-        xi = z0/x3;
-        fsmooth = SQR( std::sqrt( SQR(xi+sign) + SQR(xi*lambda) ) + xi*sign );
-        fsmooth = 1.0;
         // multiply gravitational potential by smoothing function
-        cons(IM3,k,j,i) -= dt*den*SQR(Omega_0)*x3*fsmooth;
+        Real src = dt*den*SQR(pmb->porb->Omega0)*x3;
+        cons(IM3,k,j,i) -= src;
         if (NON_BAROTROPIC_EOS) {
-          cons(IEN,k,j,i) -= dt*den*SQR(Omega_0)*prim(IVZ,k,j,i)*x3*fsmooth;
+          cons(IEN,k,j,i) -= src*prim(IVZ,k,j,i);
         }
       }
     }
