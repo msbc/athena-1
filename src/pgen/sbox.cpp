@@ -423,7 +423,7 @@ void StratOutflowInnerX3(MeshBlock *pmb, Coordinates *pco,
         prim(IVY,kl-k,j,i) = prim(IVY,kl,j,i);
         prim(IVZ,kl-k,j,i) = (prim(IVZ,kl,j,i) >= 0.0) ? 0.0 : prim(IVZ,kl,j,i);
         if (NON_BAROTROPIC_EOS) {
-          prim(IPR,kl-k,j,i) = prim(IDN,kl-k,j,i);
+          prim(IPR,kl-k,j,i) = prim(IPR,kl-k,j,i);
         }
       }
     }
@@ -472,12 +472,13 @@ void StratOutflowOuterX3(MeshBlock *pmb, Coordinates *pco,
   for (int k=1; k<=ngh; k++) {
     for (int j=jl; j<=ju; j++) {
       for (int i=il; i<=iu; i++) {
+        Real den = prim(IDN,kl,j,i);
         prim(IDN,ku+k,j,i) = prim(IDN,ku,j,i);
         prim(IVX,ku+k,j,i) = prim(IVX,ku,j,i);
         prim(IVY,ku+k,j,i) = prim(IVY,ku,j,i);
         prim(IVZ,ku+k,j,i) = (prim(IVZ,ku,j,i) <= 0.0) ? 0.0 : prim(IVZ,ku,j,i);
         if (NON_BAROTROPIC_EOS) {
-          prim(IPR,ku+k,j,i) = prim(IDN,ku+k,j,i);
+          prim(IPR,ku+k,j,i) = prim(IPR,ku+k,j,i);
         }
       }
     }
