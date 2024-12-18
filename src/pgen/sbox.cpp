@@ -156,8 +156,8 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   }
 
   // Compute field strength based on beta.
+  B0 = std::sqrt(static_cast<Real>(2.0*pres/beta));
   if (MAGNETIC_FIELDS_ENABLED && Globals::my_rank == 0 && lid == 0) {
-    B0 = std::sqrt(static_cast<Real>(2.0*pres/beta));
     std::cout << "B0=" << B0 << std::endl;
   }
   Real asqr0;
