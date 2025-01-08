@@ -468,11 +468,11 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
         }
         if (ipert == 1) {
           rval = amp*(ran2(&iseed) - 0.5);
-          rd *= (1.0+2.0*rval);
+          rd = rho*(1.0+2.0*rval);
           if (rd < dfloor) rd = dfloor;
           SumRd += rd;
           if (NON_BAROTROPIC_EOS) {
-            rp *= (1.0+2.0*rval);
+            rp = p/rho*rd;
             if (rp < pfloor) rp = pfloor;
           }
           rval = amp*(ran2(&iseed) - 0.5);
@@ -488,6 +488,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           SumRvz += rd*rvz;
           // no perturbations
         } else {
+          rd = rho*std::exp(-x3*x3);
           rvx = 0;
           rvy = 0;
           rvz = 0;
