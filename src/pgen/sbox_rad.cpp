@@ -166,6 +166,20 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     EnrollUserBoundaryFunction(BoundaryFace::outer_x3, StratOutflowOuterX3);
   }
 
+  // enroll user-defined boundary conditions
+  if (mesh_bcs[BoundaryFace::inner_x3] == GetBoundaryFlag("user")) {
+    EnrollUserBoundaryFunction(BoundaryFace::inner_x3, StratOutflowInnerX3);
+    if (NR_RADIATION_ENABLED || IM_RADIATION_ENABLED) {
+      EnrollUserRadBoundaryFunction(BoundaryFace::inner_x3, RadBot);
+    }
+  }
+  if (mesh_bcs[BoundaryFace::outer_x3] == GetBoundaryFlag("user")) {
+    EnrollUserBoundaryFunction(BoundaryFace::outer_x3, StratOutflowOuterX3);
+    if (NR_RADIATION_ENABLED || IM_RADIATION_ENABLED) {
+      EnrollUserRadBoundaryFunction(BoundaryFace::outer_x3, RadTop);
+    }
+  }
+
   if (!shear_periodic) {
     std::stringstream msg;
     msg << "### FATAL ERROR in hb3.cpp ProblemGenerator" << std::endl
