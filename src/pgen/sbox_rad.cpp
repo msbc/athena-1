@@ -964,6 +964,7 @@ Real OpalOpacityTable::GetOpacity(const Real rho, const Real tgas) {
     Real t2 = break_vals[i];
     Real frac = (logt - t1) / (t2 - t1);
     nt2 = nt1 + std::ceil(frac * (breaks[i] - nt1));
+    nt1 = nt2 - 1;
     if (nt1 < 0 || nt2 < 0) {
       nt1 = 0;
       nt2 = 0;
@@ -981,7 +982,6 @@ Real OpalOpacityTable::GetOpacity(const Real rho, const Real tgas) {
         ATHENA_ERROR(msg);
       }
     }
-    nt1 = nt2 - 1;
   }
 
   if (MSBC_DEBUG) {
