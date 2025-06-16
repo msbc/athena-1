@@ -40,7 +40,7 @@ if __name__ == '__main__':
     parser.add_argument('png_file', help='The PNG file to convert.')
     parser.add_argument('hdf5_file', nargs='?', default='input.h5', help='The HDF5 file to create.')
     parser.add_argument('--scale', type=float, default=100, help='The scale factor/max output value.')
-    parser.add_argument('--invert', action='store_true', help='Invert the image color (make black max value).')
+    parser.add_argument('-i', '--invert', action='store_true', help='Invert the image color (make black max value).')
     parser.add_argument('--dataset', default='data', help='The dataset name in the hdf5 file.')
     parser.add_argument('--dtype', help='The output data type.')
     parser.add_argument('--fill_value', type=float, default=-1.0, help='The fill value.')
