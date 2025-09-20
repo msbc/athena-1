@@ -136,7 +136,7 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
   vars::v0 = pin->GetOrAddReal("problem", "v0", -1.0);
   if (vars::v0 < 0.0) {
     Real mach = pin->GetOrAddReal("problem", "mach", 1.0);
-    vars::v0 = mach * sqrt(vars::gamma * vars::p0 / vars::rho0);
+    vars::v0 = mach * std::sqrt(vars::gamma * vars::p0 / vars::rho0);
   }
 
   AllocateRealUserMeshBlockDataField(1);
