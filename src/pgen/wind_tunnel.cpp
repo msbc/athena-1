@@ -148,9 +148,9 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
   int lx1 = static_cast<int>(loc.lx1);
   int lx2 = static_cast<int>(loc.lx2);
   int lx3 = static_cast<int>(loc.lx3);
-  int start_file[3] = {lx3 * nx3, lx2 * nx2, lx1 * nx1};
-  int count_file[3] = {nx3, nx2, nx1};
-  int start_mem[3] = {ks, js, is};
+  int start_file[3] = {1, lx2 * nx2, lx1 * nx1};
+  int count_file[3] = {1, nx2, nx1};
+  int start_mem[3] = {0, js, is};
   int count_mem[3] = {nx3, nx2, nx1};
   HDF5ReadRealArray(filename.c_str(), dataset.c_str(), 3, start_file, count_file, 3,
                     start_mem, count_mem, data, true);
@@ -175,7 +175,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     for (int j=js; j<=je; j++) {
 #pragma omp simd
       for (int i=is; i<=ie; i++) {
-        rho = data(k, j, i);
+        rho = data(0, j, i);
         phydro->u(IDN,k,j,i) = (rho > 0) ? rho : rho0;
         phydro->u(IM1,k,j,i) = 0.0;
         phydro->u(IM2,k,j,i) = 0.0;
@@ -220,11 +220,12 @@ void UserSrc(MeshBlock *pmb, const Real time, const Real dt,
   Real rho;
   const Real e0 = vars::e0;
 
-  for (int k=pmb->ks; k<=pmb->ke; ++k) {
+  const int ke = pmb->ke > 1 ? pmb->ke - 1 : 1;
+  for (int k=pmb->ks; k<=ke; ++k) {
     for (int j=pmb->js; j<=pmb->je; ++j) {
 #pragma omp simd
       for (int i=pmb->is; i<=pmb->ie; ++i) {
-        rho = data(k, j, i);
+        rho = data(0, j, i);
         if (rho > 0) {
           cons(IDN, k, j, i) = rho;
           cons(IM1, k, j, i) = 0.0;
@@ -278,11 +279,11 @@ void WindflowOuterX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &a, Fac
     for (int j=jl; j<=ju; ++j) {
 #pragma omp simd
       for (int i=1; i<=ngh; ++i) {
-        prim(IDN,k,j,iu+i) = rho0;
-        prim(IVX,k,j,iu+i) = -v0;
-        prim(IVY,k,j,iu+i) = 0.0;
-        prim(IVZ,k,j,iu+i) = 0.0;
-        prim(IPR,k,j,iu+i) = p0;
+        prim(IDN,k,j,iu+i) = prim(IDN,k,j,iu);
+        prim(IVX,k,j,iu+i) = prim(IVX,k,j,iu) > 0.0 ? prim(IVX,k,j,iu) : 0.0;
+        prim(IVY,k,j,iu+i) = prim(IVY,k,j,iu);
+        prim(IVZ,k,j,iu+i) = prim(IVZ,k,j,iu);
+        prim(IPR,k,j,iu+i) = prim(IPR,k,j,iu);
       }
     }
   }
@@ -297,7 +298,7 @@ void MeshBlock::UserWorkBeforeOutput(ParameterInput *pin) {
   for (int k = ks; k <= ke; ++k) {
     for (int j = js; j <= je; ++j) {
       for (int i = is; i <= ie; ++i) {
-        user_out_var(0,k,j,i) = data(k, j, i);
+        user_out_var(0,k,j,i) = data(0, j, i);
       }
     }
   }
