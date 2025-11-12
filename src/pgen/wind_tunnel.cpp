@@ -141,17 +141,17 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
 
   AllocateRealUserMeshBlockDataField(1);
   AthenaArray<Real> &data = ruser_meshblock_data[0];
-  data.NewAthenaArray(ncells3, ncells2, ncells1);
+  data.NewAthenaArray(1, ncells2, ncells1);
 
   std::string filename = pin->GetOrAddString("problem", "input_filename", "input.h5");
   std::string dataset = pin->GetOrAddString("problem", "dataset", "data");
   int lx1 = static_cast<int>(loc.lx1);
   int lx2 = static_cast<int>(loc.lx2);
   int lx3 = static_cast<int>(loc.lx3);
-  int start_file[3] = {1, lx2 * nx2, lx1 * nx1};
+  int start_file[3] = {0, lx2 * nx2, lx1 * nx1};
   int count_file[3] = {1, nx2, nx1};
   int start_mem[3] = {0, js, is};
-  int count_mem[3] = {nx3, nx2, nx1};
+  int count_mem[3] = {1, nx2, nx1};
   HDF5ReadRealArray(filename.c_str(), dataset.c_str(), 3, start_file, count_file, 3,
                     start_mem, count_mem, data, true);
 #ifdef USE_UOV
@@ -172,10 +172,11 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   Real rho;
 
   for (int k=ks; k<=ke; k++) {
+    const bool write_plane = (pmy_mesh->mesh_size.x3max > block_size.x3max) || (k < ke);
     for (int j=js; j<=je; j++) {
 #pragma omp simd
       for (int i=is; i<=ie; i++) {
-        rho = data(0, j, i);
+        rho = write_plane ? data(0, j, i) : 0.0;
         phydro->u(IDN,k,j,i) = (rho > 0) ? rho : rho0;
         phydro->u(IM1,k,j,i) = 0.0;
         phydro->u(IM2,k,j,i) = 0.0;
