@@ -222,7 +222,7 @@ void UserSrc(MeshBlock *pmb, const Real time, const Real dt,
   Real rho;
   const Real e0 = vars::e0;
 
-  const int ke = pmb->ke > 1 ? pmb->ke - 1 : 1;
+  const int ke = pmb->ke > 1 ? pmb->ke - 1 : 0;
   for (int k=pmb->ks; k<=ke; ++k) {
     for (int j=pmb->js; j<=pmb->je; ++j) {
 #pragma omp simd
