@@ -171,6 +171,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   const Real e0 = vars::e0;
   Real rho;
 
+  const bool left = (pmy_mesh->mesh_size.x1min == block_size.x1min);
   for (int k=ks; k<=ke; k++) {
     const bool write_plane = (pmy_mesh->mesh_size.x3max > block_size.x3max) || (k < ke);
     for (int j=js; j<=je; j++) {
@@ -178,7 +179,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       for (int i=is; i<=ie; i++) {
         rho = write_plane ? data(0, j, i) : 0.0;
         phydro->u(IDN,k,j,i) = (rho > 0) ? rho : rho0;
-        phydro->u(IM1,k,j,i) = 0.0;
+        phydro->u(IM1,k,j,i) = (left && i==is) ? rho * vars::v0 : 0.0;
         phydro->u(IM2,k,j,i) = 0.0;
         phydro->u(IM3,k,j,i) = 0.0;
         if (NON_BAROTROPIC_EOS) {
