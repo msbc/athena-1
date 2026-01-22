@@ -1,13 +1,9 @@
 #! /usr/bin/env python
 
-def png2hdf5(png_file, hdf5_file='input.h5', scale=100, invert=True, dataset='data',
-             dtype=None, fill_value=-1.0):
-    """Convert a PNG file to an HDF5 file."""
-    import h5py
+def png2value(png_file, scale=100, invert=True, dtype=None, fill_value=-1.0):
+    """Convert a PNG file to a 2D numpy array of values."""
     import numpy as np
     from PIL import Image
-
-    dtype = dtype or np.float64
 
     # Open the PNG file
     with Image.open(png_file) as img:
@@ -21,12 +17,29 @@ def png2hdf5(png_file, hdf5_file='input.h5', scale=100, invert=True, dataset='da
     if scale:
         img *= scale / 255
 
-    # Fill the image
-    img = img.astype(dtype)
-    if fill_value is False:
-        fill_value = None
+    if dtype is not None:
+        img = img.astype(dtype)
     if fill_value is not None:
         img[img == 0] = fill_value
+
+    return img
+
+
+def png2hdf5(png_file, hdf5_file='input.h5', scale=100, invert=True, dataset='data',
+             dtype=None, fill_value=-1.0, slit=None, nz=None):
+    """Convert a PNG file to an HDF5 file."""
+    import h5py
+    import numpy as np
+
+    dtype = dtype or np.float64
+    nz = nz or (1 if slit is None else 5)
+    # Convert the PNG file to a 2D array
+    img = png2value(png_file, scale=scale, invert=invert, dtype=dtype, fill_value=None)
+    img = np.repeat(img, nz, axis=0)
+
+    if slit is not None:
+        slit_img = png2value(slit, scale=scale, invert=invert, dtype=dtype, fill_value=None)
+        img[2] = slit_img[0]
 
     # Create the HDF5 file
     with h5py.File(hdf5_file, 'w') as f:
@@ -44,6 +57,9 @@ if __name__ == '__main__':
     parser.add_argument('--dataset', default='data', help='The dataset name in the hdf5 file.')
     parser.add_argument('--dtype', help='The output data type.')
     parser.add_argument('--fill_value', type=float, default=-1.0, help='The fill value.')
+    parser.add_argument('--slit', type=str, default=None, help='image file with slits for fluid flow.')
+    parser.add_argument('--nz', type=int, default=None, help='Total number of zones in z direction.')
 
     args = parser.parse_args()
-    png2hdf5(args.png_file, args.hdf5_file, args.scale, args.invert, args.dataset, args.dtype, args.fill_value)
+    png2hdf5(args.png_file, args.hdf5_file, args.scale, args.invert, args.dataset, args.dtype, args.fill_value,
+             args.slit, args.nz)
